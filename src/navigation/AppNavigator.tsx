@@ -29,6 +29,7 @@ import { WalletDashboardScreen } from '../screens/wallet/WalletDashboardScreen';
 import { SelectTokenScreen } from '../screens/wallet/SelectTokenScreen';
 import { WalletSelectScreen } from '../screens/wallet/WalletSelectScreen';
 import { ManageWalletScreen } from '../screens/wallet/ManageWalletScreen';
+import { EditWalletScreen } from '../screens/wallet/EditWalletScreen';
 
 // Loading Screen Component
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -78,6 +79,7 @@ const AuthStack: React.FC = () => {
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="WalletSelect" component={WalletSelectScreen} />
       <Stack.Screen name="ManageWallet" component={ManageWalletScreen} />
+      <Stack.Screen name="EditWallet" component={EditWalletScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
@@ -109,6 +111,7 @@ const MainStack: React.FC = () => {
       <Stack.Screen name="SelectToken" component={SelectTokenScreen} />
       <Stack.Screen name="WalletSelect" component={WalletSelectScreen} />
       <Stack.Screen name="ManageWallet" component={ManageWalletScreen} />
+      <Stack.Screen name="EditWallet" component={EditWalletScreen} />
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="WalletDashboard" component={WalletDashboardScreen} />
     </Stack.Navigator>

@@ -15,7 +15,7 @@ interface WalletRow {
 
 export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { theme } = useTheme();
-  const { wallet, wallets, removeWallet, renameWallet, setActiveWallet } = useWeb3Auth();
+  const { wallet, wallets, removeWallet } = useWeb3Auth();
   const [items, setItems] = useState<WalletRow[]>([]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }
 
   const renderRow = (item: WalletRow) => (
     <View key={item.id} style={[styles.row, item.selected && styles.rowSelected]}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>W</Text></View>
+      <View style={styles.avatar}><Text style={styles.avatarText}>{(item.name || item.address || 'W').charAt(0).toUpperCase()}</Text></View>
       <View style={styles.rowMid}>
         <Text style={styles.rowTitle}>{item.name}</Text>
         <Text style={styles.rowSub}>{item.balance}</Text>
@@ -80,7 +80,7 @@ export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }
       >
         <Icon name="delete-outline" size={20} color={theme.colors.error} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => { /* could open rename dialog later */ }}>
+      <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('EditWallet', { walletId: item.id })}>
         <Icon name="edit" size={20} color={theme.colors.text} />
       </TouchableOpacity>
     </View>

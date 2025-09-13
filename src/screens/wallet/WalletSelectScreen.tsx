@@ -52,7 +52,6 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Current</Text>
         {wallets.map(w => (
           <TouchableOpacity key={w.id || w.address} style={styles.item} onPress={async () => { await setActiveWallet(w.id || w.address); navigation.goBack(); }}>
             <Icon name="account-balance-wallet" size={22} color={theme.colors.primary} />
