@@ -2,20 +2,23 @@ import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { LocaleProvider } from './src/context/LocaleContext';
+import { Web3AuthProvider } from './src/context/Web3AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
 
-// Suppress Firebase deprecation warnings temporarily during v22 transition
-if (__DEV__) {
-  (globalThis as any).RNFB_SILENCE_MODULAR_DEPRECATION_WARNINGS = true;
-}
+// App initialization
 
 const App: React.FC = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <Web3AuthProvider>
+              <AppNavigator />
+            </Web3AuthProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -15,7 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import BackendOTPService from '../../services/backendOTPService';
+// BackendOTPService is now handled through AuthContext
 
 interface SignUpScreenProps {
   navigation: any;
@@ -75,24 +75,18 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     try {
       console.log('🚀 Starting signup process for:', email);
       
-      // Send OTP using Backend API
-      const backendOTPService = BackendOTPService.getInstance();
-      const result = await backendOTPService.sendOTP(email);
+      // Use AuthContext signUp function to store temp data and send OTP
+      await signUp(email, password, fullName);
       
-      console.log('📧 OTP Service Result:', result);
+      console.log('✅ SignUp function completed successfully');
       
-      if (result.success) {
-        // Navigate to email OTP verification screen
-        navigation.navigate('EmailOTPVerification', {
-          email,
-          password,
-          fullName,
-          acceptTerms,
-        });
-      } else {
-        console.error('❌ OTP sending failed:', result.message);
-        Alert.alert('Failed to Send OTP', result.message);
-      }
+      // Navigate to email OTP verification screen
+      navigation.navigate('EmailOTPVerification', {
+        email,
+        password,
+        fullName,
+        acceptTerms,
+      });
     } catch (error: any) {
       console.error('❌ Signup error:', error);
       Alert.alert('Failed to Send OTP', error.message || 'Please try again later.');

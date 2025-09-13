@@ -1,20 +1,34 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  BackHandler,
+  ToastAndroid,
+  Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Button } from '../../components/common/Button';
+import { useWeb3Auth } from '../../context/Web3AuthContext';
+// import { Button } from '../../components/common/Button';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useLocale } from '../../context/LocaleContext';
+import { t } from '../../i18n';
 
-export const HomeScreen: React.FC = () => {
+interface HomeScreenProps {
+  navigation: any;
+}
+
+export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { wallet } = useWeb3Auth();
+  const { locale } = useLocale();
+  const backPressCount = useRef(0);
 
   const handleSignOut = async () => {
     try {
@@ -23,6 +37,36 @@ export const HomeScreen: React.FC = () => {
       console.error('Sign out error:', error);
     }
   };
+
+  const handleBackPress = () => {
+    if (backPressCount.current === 0) {
+      backPressCount.current = 1;
+      
+      // Show toast message
+      if (Platform.OS === 'android') {
+        ToastAndroid.show('Press back again to exit', ToastAndroid.SHORT);
+      }
+      
+      // Reset counter after 2 seconds
+      setTimeout(() => {
+        backPressCount.current = 0;
+      }, 2000);
+      
+      return true; // Prevent default back action
+    } else {
+      // Second back press - exit app
+      BackHandler.exitApp();
+      return true;
+    }
+  };
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    
+    return () => {
+      backHandler.remove();
+    };
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
@@ -38,6 +82,32 @@ export const HomeScreen: React.FC = () => {
       backgroundColor: theme.colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
+    },
+    greetingRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    profileButton: {
+      marginRight: 12,
+    },
+    avatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+    },
+    avatarPlaceholder: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: theme.colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarInitial: {
+      color: theme.colors.white,
+      fontSize: 16,
+      fontWeight: '700',
     },
     greeting: {
       flex: 1,
@@ -64,6 +134,51 @@ export const HomeScreen: React.FC = () => {
       flex: 1,
       paddingHorizontal: 24,
       paddingTop: 24,
+    },
+    walletSection: {
+      marginBottom: 20,
+    },
+    walletSectionTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 12,
+    },
+    walletCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme.isDark ? 0.25 : 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    walletInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    walletDetails: {
+      marginLeft: 12,
+      flex: 1,
+    },
+    walletTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    walletAddress: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    walletSubtitle: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
     },
     welcomeCard: {
       backgroundColor: theme.colors.primary,
@@ -175,23 +290,38 @@ export const HomeScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.greeting}>
-          <Text style={styles.greetingText}>Welcome back,</Text>
-          <Text style={styles.userName}>
-            {user?.displayName || user?.email?.split('@')[0] || 'User'}
-          </Text>
+        <View style={styles.greetingRow}>
+          <TouchableOpacity
+            style={styles.profileButton}
+            onPress={() => navigation.navigate('Settings')}
+            activeOpacity={0.8}
+          >
+            {user?.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>
+                  {(user?.fullName || user?.email || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <View style={styles.greeting}>
+            <Text style={styles.greetingText}>{t('welcome_back', locale)}</Text>
+            <Text style={styles.userName}>
+              {user?.fullName || user?.email?.split('@')[0] || 'User'}
+            </Text>
+          </View>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate('Notification')}>
             <Icon name="notifications" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Icon name="settings" size={24} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.content}>
+
         <View style={styles.welcomeCard}>
           <Text style={styles.welcomeTitle}>Nani Wallet</Text>
           <Text style={styles.welcomeText}>
@@ -200,10 +330,18 @@ export const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>{t('quick_actions', locale)}</Text>
           <View style={styles.actionGrid}>
             {quickActions.map((action, index) => (
-              <TouchableOpacity key={index} style={styles.actionCard}>
+              <TouchableOpacity
+                key={index}
+                style={styles.actionCard}
+                onPress={() => {
+                  if (action.title === 'My Wallet') {
+                    navigation.navigate('WalletDashboard');
+                  }
+                }}
+              >
                 <View style={[styles.actionIcon, { backgroundColor: action.color + '20' }]}>
                   <Icon name={action.icon} size={24} color={action.color} />
                 </View>
@@ -213,45 +351,7 @@ export const HomeScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.userInfo}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
-          <View style={styles.userInfoRow}>
-            <Text style={styles.userInfoLabel}>Email</Text>
-            <Text style={styles.userInfoValue}>{user?.email || 'Not provided'}</Text>
-          </View>
-          <View style={styles.userInfoRow}>
-            <Text style={styles.userInfoLabel}>Phone</Text>
-            <Text style={styles.userInfoValue}>{user?.phoneNumber || 'Not provided'}</Text>
-          </View>
-          <View style={styles.userInfoRow}>
-            <Text style={styles.userInfoLabel}>Email Verified</Text>
-            <Text style={styles.userInfoValue}>
-              {user?.emailVerified ? 'Yes' : 'No'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.themeSection}>
-          <Text style={styles.sectionTitle}>Theme Settings</Text>
-          <TouchableOpacity style={styles.themeButton} onPress={toggleTheme}>
-            <Text style={styles.themeButtonText}>
-              Toggle Theme ({theme.isDark ? 'Dark' : 'Light'})
-            </Text>
-            <Icon 
-              name={theme.isDark ? 'light-mode' : 'dark-mode'} 
-              size={24} 
-              color={theme.colors.text} 
-            />
-          </TouchableOpacity>
-        </View>
-
-        <Button
-          title="Sign Out"
-          onPress={handleSignOut}
-          variant="outline"
-          fullWidth
-          size="large"
-        />
+        
       </ScrollView>
     </SafeAreaView>
   );

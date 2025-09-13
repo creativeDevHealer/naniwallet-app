@@ -9,10 +9,11 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import BackendOTPService from '../../services/backendOTPService';
+// BackendOTPService is now handled through AuthContext
 
 interface EmailOTPVerificationScreenProps {
   navigation: any;
@@ -26,21 +27,21 @@ interface EmailOTPVerificationScreenProps {
   };
 }
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProps> = ({
   navigation,
   route,
 }) => {
   const { theme } = useTheme();
-  const { signUp, updateProfile } = useAuth();
-  const { email, password, fullName, acceptTerms } = route.params;
+  const { verifyOTPAndCreateAccount, resendOTP } = useAuth();
+  const { email } = route.params;
   
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(30);
-  const [canResend, setCanResend] = useState(false);
-  const [showModal, setShowModal] = useState(true);
+  const [_canResend, setCanResend] = useState(false);
+  const [_showModal, _setShowModal] = useState(true);
   
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -80,29 +81,35 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
 
     setIsLoading(true);
     try {
-      // Verify OTP using Backend service
-      const backendOTPService = BackendOTPService.getInstance();
-      const verificationResult = await backendOTPService.verifyOTP(email, otpCode);
+      // Verify OTP and create account using new auth flow
+      await verifyOTPAndCreateAccount(email, otpCode);
       
-      if (verificationResult.success) {
-        // Create the Firebase account after OTP verification
-        await signUp(email, password);
+      // Get temp data from AsyncStorage for navigation
+      const tempDataString = await AsyncStorage.getItem('tempSignupData');
+      if (tempDataString) {
+        const tempData = JSON.parse(tempDataString);
         
-        // Update profile with full name
-        await updateProfile(fullName);
-        
-        // Account created successfully - Firebase auth will handle navigation
-        Alert.alert('Success', 'Your account has been created successfully!');
+        // Navigate to phone OTP verification
+        navigation.navigate('PhoneOTPVerification', {
+          email: email,
+          fullName: tempData.fullName,
+          password: tempData.password
+        });
       } else {
-        Alert.alert('Verification Failed', verificationResult.message);
-        
-        // If it's an attempts error, clear the form
-        if (verificationResult.message.includes('Maximum attempts exceeded')) {
-          setCode(['', '', '', '', '', '']);
-        }
+        // Fallback: navigate with just email if temp data not found
+        navigation.navigate('PhoneOTPVerification', {
+          email: email,
+          fullName: '',
+          password: ''
+        });
       }
     } catch (error: any) {
       Alert.alert('Verification Failed', error.message || 'Please try again.');
+      
+      // If it's an attempts error, clear the form
+      if (error.message.includes('Maximum attempts exceeded')) {
+        setCode(['', '', '', '', '', '']);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -113,25 +120,20 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
       // Clear current OTP inputs
       setCode(['', '', '', '', '', '']);
       
-      // Resend OTP using Backend service
-      const backendOTPService = BackendOTPService.getInstance();
-      const result = await backendOTPService.resendOTP(email);
+      // Resend OTP using AuthContext
+      await resendOTP(email);
       
-      if (result.success) {
-        setTimer(30);
-        setCanResend(false);
-        Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
-      } else {
-        Alert.alert('Failed to Resend', result.message);
-      }
+      setTimer(30);
+      setCanResend(false);
+      Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
     } catch (error: any) {
       Alert.alert('Failed to Resend', error.message || 'Please try again.');
     }
   };
 
-  const formatEmail = (email: string) => {
-    const [username, domain] = email.split('@');
-    if (username.length <= 2) return email;
+  const formatEmail = (emailAddress: string) => {
+    const [username, domain] = emailAddress.split('@');
+    if (username.length <= 2) return emailAddress;
     
     const visibleChars = username.slice(0, 2);
     const hiddenChars = '*'.repeat(Math.max(0, username.length - 2));
@@ -301,7 +303,7 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
   return (
     <View style={styles.container}>
       <Modal
-        visible={showModal}
+        visible={_showModal}
         transparent
         animationType="slide"
         onRequestClose={() => navigation.goBack()}
@@ -330,7 +332,9 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
                 {code.map((digit, index) => (
                   <TextInput
                     key={index}
-                    ref={(ref) => (inputRefs.current[index] = ref)}
+                    ref={(ref) => {
+                      inputRefs.current[index] = ref;
+                    }}
                     style={[
                       styles.codeInput,
                       digit && styles.codeInputFilled,
