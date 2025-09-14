@@ -31,6 +31,13 @@ import { WalletSelectScreen } from '../screens/wallet/WalletSelectScreen';
 import { ManageWalletScreen } from '../screens/wallet/ManageWalletScreen';
 import { EditWalletScreen } from '../screens/wallet/EditWalletScreen';
 
+// Transaction Screens
+import { TopUpScreen } from '../screens/transaction/TopUpScreen';
+import { SelectReceiveTokenScreen } from '../screens/transaction/SelectReceiveTokenScreen';
+import { ReceiveScreen } from '../screens/transaction/ReceiveScreen';
+import { SelectSendTokenScreen } from '../screens/transaction/SelectSendTokenScreen';
+import { SendScreen } from '../screens/transaction/SendScreen';
+
 // Loading Screen Component
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
@@ -80,6 +87,11 @@ const AuthStack: React.FC = () => {
       <Stack.Screen name="WalletSelect" component={WalletSelectScreen} />
       <Stack.Screen name="ManageWallet" component={ManageWalletScreen} />
       <Stack.Screen name="EditWallet" component={EditWalletScreen} />
+      <Stack.Screen name="SelectSendToken" component={SelectSendTokenScreen} />
+      <Stack.Screen name="SendDialog" component={SendScreen} />
+      <Stack.Screen name="TopUp" component={TopUpScreen} />
+      <Stack.Screen name="SelectReceiveToken" component={SelectReceiveTokenScreen} />
+      <Stack.Screen name="ReceiveDialog" component={ReceiveScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
   );
@@ -114,6 +126,11 @@ const MainStack: React.FC = () => {
       <Stack.Screen name="EditWallet" component={EditWalletScreen} />
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="WalletDashboard" component={WalletDashboardScreen} />
+      <Stack.Screen name="SelectSendToken" component={SelectSendTokenScreen} />
+      <Stack.Screen name="SendDialog" component={SendScreen} />
+      <Stack.Screen name="TopUp" component={TopUpScreen} />
+      <Stack.Screen name="SelectReceiveToken" component={SelectReceiveTokenScreen} />
+      <Stack.Screen name="ReceiveDialog" component={ReceiveScreen} />
     </Stack.Navigator>
   );
 };

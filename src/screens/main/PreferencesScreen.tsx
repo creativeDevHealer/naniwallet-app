@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface Props { navigation: any }
 
 export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
-  const { theme, setThemeMode } = useTheme();
+  const { theme, setThemeMode, changePrimaryColor } = useTheme();
   const { locale } = useLocale();
   const languageLabel = useMemo(() => {
     switch (locale) {
@@ -28,7 +28,9 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
   }, [locale]);
   const [hideBalances, setHideBalances] = useState(false);
   const [themeSheetOpen, setThemeSheetOpen] = useState(false);
+  const [colorSheetOpen, setColorSheetOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'Auto' | 'Light' | 'Dark'>('Auto');
+  const [currentPrimaryColor, setCurrentPrimaryColor] = useState<string>('#2E7D32');
 
   useEffect(() => {
     (async () => {
@@ -38,6 +40,11 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
       if (savedTheme === 'light') setCurrentTheme('Light');
       else if (savedTheme === 'dark') setCurrentTheme('Dark');
       else setCurrentTheme('Auto');
+      
+      const savedPrimaryColor = await AsyncStorage.getItem('primaryColor');
+      if (savedPrimaryColor) {
+        setCurrentPrimaryColor(savedPrimaryColor);
+      }
     })();
   }, []);
 
@@ -46,16 +53,17 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
     await AsyncStorage.setItem('pref_hide_balances', value ? 'true' : 'false');
   };
 
-  // Close theme sheet on hardware back instead of propagating to Home's handler
+  // Close sheets on hardware back instead of propagating to Home's handler
   useEffect(() => {
-    if (!themeSheetOpen) return;
+    if (!themeSheetOpen && !colorSheetOpen) return;
     const onBack = () => {
-      setThemeSheetOpen(false);
+      if (themeSheetOpen) setThemeSheetOpen(false);
+      if (colorSheetOpen) setColorSheetOpen(false);
       return true; // consume back press
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [themeSheetOpen]);
+  }, [themeSheetOpen, colorSheetOpen]);
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.colors.background },
     header: { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface },
@@ -105,6 +113,17 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ color: theme.colors.textSecondary, marginRight: 6 }}>{currentTheme}</Text>
+              <Icon name="chevron-right" size={22} color={theme.colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => setColorSheetOpen(true)}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Icon name="palette" size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
+              <Text style={{ color: theme.colors.text }}>Primary Color</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: currentPrimaryColor, marginRight: 8, borderWidth: 1, borderColor: theme.colors.border }} />
               <Icon name="chevron-right" size={22} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
@@ -166,6 +185,65 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
             </TouchableOpacity>
           ))}
           <View style={{ height: 12 }} />
+        </View>
+      )}
+
+      {colorSheetOpen && (
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.surface, borderTopLeftRadius: 12, borderTopRightRadius: 12, borderWidth: 1, borderColor: theme.colors.border, maxHeight: '80%' }}>
+          <View style={{ alignItems: 'center', paddingTop: 8 }}>
+            <View style={{ width: 44, height: 3, backgroundColor: theme.colors.border, borderRadius: 2 }} />
+          </View>
+          <Text style={{ textAlign: 'center', paddingVertical: 12, color: theme.colors.text, fontWeight: '600' }}>Primary Color</Text>
+          
+          {/* Color Grid */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 12 }}>
+              {[
+                { name: 'Islamic Green', color: '#2E7D32' },
+                { name: 'Ocean Blue', color: '#1976D2' },
+                { name: 'Royal Purple', color: '#7B1FA2' },
+                { name: 'Sunset Orange', color: '#F57C00' },
+                { name: 'Cherry Red', color: '#D32F2F' },
+                { name: 'Teal Blue', color: '#00796B' },
+                { name: 'Deep Indigo', color: '#303F9F' },
+                { name: 'Warm Brown', color: '#5D4037' },
+                { name: 'Forest Green', color: '#388E3C' },
+                { name: 'Crimson', color: '#C2185B' },
+                { name: 'Navy Blue', color: '#1565C0' },
+                { name: 'Dark Gray', color: '#424242' },
+              ].map((colorOption) => (
+                <TouchableOpacity
+                  key={colorOption.color}
+                  style={{
+                    width: 60,
+                    height: 60,
+                    marginBottom: 12,
+                    borderRadius: 12,
+                    backgroundColor: colorOption.color,
+                    borderWidth: currentPrimaryColor === colorOption.color ? 3 : 1,
+                    borderColor: currentPrimaryColor === colorOption.color ? theme.colors.text : theme.colors.border,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: theme.colors.shadow,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}
+                  onPress={async () => {
+                    changePrimaryColor(colorOption.color);
+                    setCurrentPrimaryColor(colorOption.color);
+                    setColorSheetOpen(false);
+                  }}
+                >
+                  {currentPrimaryColor === colorOption.color && (
+                    <Icon name="check" size={20} color="white" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <View style={{ height: 20 }} />
         </View>
       )}
     </SafeAreaView>

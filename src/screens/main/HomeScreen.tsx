@@ -26,12 +26,15 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
-  const { wallet } = useWeb3Auth();
+  const { wallet, clearWallet } = useWeb3Auth();
   const { locale } = useLocale();
   const backPressCount = useRef(0);
 
   const handleSignOut = async () => {
     try {
+      // Clear wallet data first
+      await clearWallet();
+      // Then sign out from auth
       await signOut();
     } catch (error) {
       console.error('Sign out error:', error);
@@ -279,12 +282,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   });
 
   const quickActions = [
-    { icon: 'account-balance-wallet', title: 'My Wallet', color: theme.colors.primary },
-    { icon: 'send', title: 'Send Money', color: theme.colors.secondary },
-    { icon: 'receipt', title: 'Transactions', color: theme.colors.info },
-    { icon: 'calculate', title: 'Zakat Calculator', color: theme.colors.success },
-    { icon: 'people', title: 'Ayuto Groups', color: theme.colors.warning },
-    { icon: 'trending-up', title: 'Investments', color: theme.colors.primary },
+    { icon: 'account-balance-wallet', title: 'My Wallet', color: theme.colors.primary, action: 'WalletDashboard' },
+    { icon: 'send', title: 'Send Money', color: theme.colors.secondary, action: 'SelectSendToken' },
+    { icon: 'add-circle', title: 'Top Up', color: theme.colors.success, action: 'TopUp' },
+    { icon: 'calculate', title: 'Zakat Calculator', color: theme.colors.warning, action: 'ZakatCalculator' },
+    { icon: 'trending-up', title: 'Investments', color: theme.colors.primary, action: 'Investments' },
   ];
 
   return (
@@ -337,8 +339,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 key={index}
                 style={styles.actionCard}
                 onPress={() => {
-                  if (action.title === 'My Wallet') {
-                    navigation.navigate('WalletDashboard');
+                  if (action.action) {
+                    navigation.navigate(action.action);
                   }
                 }}
               >

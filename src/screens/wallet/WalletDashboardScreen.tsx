@@ -144,12 +144,13 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
   };
 
   const handleSendMoney = () => {
-    navigation.navigate('SendMoney');
+    navigation.navigate('SelectSendToken');
   };
 
   const handleReceiveMoney = () => {
-    navigation.navigate('ReceiveMoney');
+    navigation.navigate('SelectReceiveToken');
   };
+
 
   const handleViewTransactions = () => {
     navigation.navigate('TransactionHistory');
@@ -287,7 +288,9 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
     pillButton: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginHorizontal: 6 },
     pillPrimary: { backgroundColor: theme.colors.primary },
     pillDark: { backgroundColor: theme.colors.text },
+    pillBordered: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.colors.primary },
     pillTextLight: { color: theme.colors.white, fontWeight: '700' },
+    pillTextDark: { color: theme.colors.text, fontWeight: '700' },
     tabsRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: 20, alignItems: 'center' },
     tabText: { marginRight: 16, fontWeight: '700', color: theme.colors.textSecondary },
     tabTextActive: { color: theme.colors.text },
@@ -466,13 +469,14 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           </TouchableOpacity>
         </View>
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={[styles.pillButton, styles.pillDark]} onPress={handleSendMoney}>
-            <Text style={styles.pillTextLight}>Send</Text>
+          <TouchableOpacity style={[styles.pillButton, styles.pillBordered]} onPress={handleSendMoney}>
+            <Text style={[styles.pillTextDark, { color: theme.colors.primary }]}>Send</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]} onPress={handleReceiveMoney}>
             <Text style={styles.pillTextLight}>Receive</Text>
           </TouchableOpacity>
         </View>
+        
       </View>
 
       <View style={styles.tabsRow}>

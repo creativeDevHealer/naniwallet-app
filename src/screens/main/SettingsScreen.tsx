@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useWeb3Auth } from '../../context/Web3AuthContext';
 import { useLocale } from '../../context/LocaleContext';
 import { t } from '../../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,7 @@ interface SettingsScreenProps {
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
+  const { clearWallet } = useWeb3Auth();
   const { locale } = useLocale();
 
   const styles = StyleSheet.create({
@@ -205,7 +207,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           <TouchableOpacity
             style={styles.signOutCard}
             activeOpacity={0.85}
-            onPress={async () => { try { await signOut(); } catch {} }}
+            onPress={async () => { 
+              try { 
+                // Clear wallet data first
+                await clearWallet();
+                // Then sign out from auth
+                await signOut(); 
+              } catch {} 
+            }}
           >
             <View style={styles.signOutRow}>
               <Icon name="logout" size={20} color={theme.colors.error} />

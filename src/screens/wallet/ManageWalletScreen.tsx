@@ -37,7 +37,7 @@ export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }
     placeholderRight: { width: 32 },
     listWrap: { padding: 12 },
     row: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 1, borderColor: theme.colors.border, padding: 14, marginBottom: 12 },
-    rowSelected: { borderColor: '#4C6FFF' },
+    rowSelected: { borderColor: theme.colors.accent },
     avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
     avatarText: { fontWeight: '800', color: theme.colors.text },
     rowMid: { flex: 1, marginHorizontal: 10 },

@@ -24,7 +24,7 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
     itemTitle: { color: theme.colors.text, fontWeight: '600' },
     itemSubtitle: { color: theme.colors.textSecondary, marginTop: 2 },
     actionsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 4, marginVertical: 12 },
-    addBtn: { flex: 1, backgroundColor: '#4C6FFF', borderRadius: 24, paddingVertical: 14, alignItems: 'center', marginRight: 10 },
+    addBtn: { flex: 1, backgroundColor: theme.colors.accent, borderRadius: 24, paddingVertical: 14, alignItems: 'center', marginRight: 10 },
     addBtnText: { color: theme.colors.white, fontWeight: '800' },
     manageBtn: { flex: 1, backgroundColor: 'transparent', borderRadius: 24, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border },
     manageBtnText: { color: theme.colors.text, fontWeight: '800' },

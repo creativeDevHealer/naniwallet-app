@@ -69,7 +69,7 @@ export default class TokenService {
             name: item.name || '',
             priceUSDT: typeof item.current_price === 'number' ? item.current_price : 0,
             changePct24h: typeof item.price_change_percentage_24h === 'number' ? Number(item.price_change_percentage_24h.toFixed(2)) : 0,
-            color: '#4C6FFF',
+            color: '#2E7D32', // Using primary green color for consistency
             iconUrl: item.image,
           });
         }

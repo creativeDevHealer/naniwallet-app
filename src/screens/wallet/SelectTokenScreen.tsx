@@ -143,7 +143,7 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
               selectedIds.forEach((id) => (map[id] = true));
               setEnabled(map);
             }}>
-              <Icon name={enabled[item.id] ? 'toggle-on' : 'toggle-off'} size={40} color={enabled[item.id] ? '#4C6FFF' : theme.colors.border} />
+              <Icon name={enabled[item.id] ? 'toggle-on' : 'toggle-off'} size={40} color={enabled[item.id] ? theme.colors.accent : theme.colors.border} />
             </TouchableOpacity>
           </View>
         )}

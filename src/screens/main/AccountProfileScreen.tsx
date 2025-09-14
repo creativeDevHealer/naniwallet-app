@@ -67,7 +67,7 @@ export const AccountProfileScreen: React.FC<Props> = ({ navigation }) => {
     sectionValue: { color: theme.colors.text },
     closeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 4, borderTopWidth: 1, borderTopColor: theme.colors.border },
     closeLeft: { flexDirection: 'row', alignItems: 'center' },
-    closeIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FF6B6B33', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+    closeIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.dangerLight, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
     closeText: { color: theme.colors.text, fontWeight: '600' },
   });
 
@@ -127,7 +127,7 @@ export const AccountProfileScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity style={styles.closeRow} activeOpacity={0.8}>
           <View style={styles.closeLeft}>
             <View style={styles.closeIconWrap}>
-              <Icon name="block" size={18} color="#FF6B6B" />
+              <Icon name="block" size={18} color={theme.colors.danger} />
             </View>
             <Text style={styles.closeText}>Close account</Text>
           </View>

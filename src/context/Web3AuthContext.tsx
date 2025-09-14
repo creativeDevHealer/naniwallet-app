@@ -10,6 +10,7 @@ interface Web3AuthContextType {
   user: any | null;
   wallet: WalletInfo | null;
   wallets: WalletInfo[];
+  activeWallet: WalletInfo | null;
   loading: boolean;
   
   // Methods
@@ -23,7 +24,7 @@ interface Web3AuthContextType {
   sendTransaction: (to: string, amount: string) => Promise<string>;
   validateMnemonic: (mnemonic: string) => boolean;
   generateBackup: () => any;
-  clearWallet: () => void;
+  clearWallet: () => Promise<void>;
   setActiveWallet: (walletId: string) => Promise<void>;
   removeWallet: (walletId: string) => Promise<void>;
   renameWallet: (walletId: string, name: string) => Promise<void>;
@@ -41,6 +42,7 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
   const [user, setUser] = useState<any | null>(null);
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [wallets, setWallets] = useState<WalletInfo[]>([]);
+  const [activeWallet, setActiveWalletState] = useState<WalletInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const walletService = WalletService.getInstance();
 
@@ -64,8 +66,13 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
         const activeId = await AsyncStorage.getItem('activeWalletId');
         if (activeId) {
           const target = list.find(w => (w.id || w.address) === activeId);
-          if (target) setWallet(target);
-          else if (list.length > 0) setWallet(list[0]);
+          if (target) {
+            setWallet(target);
+            setActiveWalletState(target);
+          } else if (list.length > 0) {
+            setWallet(list[0]);
+            setActiveWalletState(list[0]);
+          }
         } else if (list.length > 0) {
           setWallet(list[0]);
         }
@@ -77,6 +84,7 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
         const list = [withId];
         setWallets(list);
         setWallet(withId);
+        setActiveWalletState(withId);
         setIsLoggedIn(true);
         await AsyncStorage.setItem('wallets', JSON.stringify(list));
         await AsyncStorage.setItem('activeWalletId', withId.id || withId.address);
@@ -282,17 +290,27 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
   };
 
   // Clear wallet
-  const clearWallet = () => {
-    walletService.clearWallet();
-    setWallet(null);
-    setIsLoggedIn(false);
-    setUser(null);
+  const clearWallet = async () => {
+    try {
+      console.log('🧹 Clearing all wallet data...');
+      walletService.clearWallet();
+      setWallet(null);
+      setWallets([]);
+      setIsLoggedIn(false);
+      setUser(null);
+      // Clear all wallet-related data from AsyncStorage
+      await AsyncStorage.multiRemove(['wallets', 'activeWalletId', 'walletInfo']);
+      console.log('✅ All wallet data cleared');
+    } catch (error) {
+      console.error('❌ Error clearing wallet data:', error);
+    }
   };
 
   const setActiveWallet = async (walletId: string) => {
     const target = wallets.find(w => (w.id || w.address) === walletId);
     if (target) {
       setWallet(target);
+      setActiveWalletState(target);
       await AsyncStorage.setItem('activeWalletId', walletId);
     }
   };

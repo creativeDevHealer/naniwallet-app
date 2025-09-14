@@ -5,6 +5,7 @@ import { navigate } from '../navigation/navigationRef';
 
 interface User {
   id: string;
+  uid: string;
   email: string;
   fullName: string;
   phoneNumber?: string;
@@ -112,8 +113,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const clearAuthData = async () => {
-    // Keep 'walletInfo' on device so the non-custodial wallet remains connected across sign-outs.
-    await AsyncStorage.multiRemove(['authToken', 'userData', 'walletSetupCompleted']);
+    // Clear all authentication and wallet data when user signs out
+    await AsyncStorage.multiRemove(['authToken', 'userData', 'walletSetupCompleted', 'walletInfo', 'tempSignupData', 'emailVerifiedData']);
     setUser(null);
     setNeedsWalletSetup(false);
   };
@@ -224,8 +225,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async (): Promise<void> => {
     try {
+      console.log('🚪 User signing out - clearing all data');
       await clearAuthData();
     } catch (error: any) {
+      console.error('❌ Sign out error:', error);
       throw new Error(error.message);
     }
   };
