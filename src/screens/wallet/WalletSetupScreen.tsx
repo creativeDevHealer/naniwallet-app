@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
+import { t, isRTL, getTextAlign } from '../../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface WalletSetupScreenProps {
@@ -28,6 +30,7 @@ type SetupStep = 'welcome' | 'create' | 'import' | 'mnemonic' | 'confirm' | 'com
 
 export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation, route }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const { 
     createWallet, 
     importWalletFromMnemonic, 
@@ -92,7 +95,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       await createWallet();
       setCurrentStep('mnemonic');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create wallet');
+      Alert.alert(t('wallet_setup_error', locale), error.message || t('wallet_setup_failed_create', locale));
     } finally {
       setCreating(false);
     }
@@ -106,7 +109,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
   const handleImportFromMnemonic = async () => {
     try {
       if (!validateMnemonic(importMnemonic.trim())) {
-        Alert.alert('Invalid Mnemonic', 'Please enter a valid 12-word mnemonic phrase');
+        Alert.alert(t('wallet_setup_invalid_mnemonic', locale), t('wallet_setup_invalid_mnemonic_message', locale));
         return;
       }
       
@@ -116,7 +119,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       await new Promise(resolve => setTimeout(resolve, 100));
       await importWalletFromMnemonic(importMnemonic.trim());
       console.log('✅ Wallet imported successfully from mnemonic');
-      showToast('Wallet imported successfully');
+      showToast(t('wallet_setup_import_success', locale));
       await new Promise(resolve => setTimeout(resolve, 1200));
       if (needsWalletSetup) {
         handleWalletSetupComplete();
@@ -126,7 +129,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       }
     } catch (error: any) {
       console.error('❌ Failed to import wallet from mnemonic:', error);
-      Alert.alert('Error', error.message || 'Failed to import wallet');
+      Alert.alert(t('wallet_setup_error', locale), error.message || t('wallet_setup_import_failed', locale));
     } finally {
       setImportingMnemonic(false);
     }
@@ -137,7 +140,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
   const handleCopyMnemonic = () => {
     if (wallet?.mnemonic) {
       Clipboard.setString(wallet.mnemonic);
-      showToast('Mnemonic phrase copied to clipboard');
+      showToast(t('wallet_setup_mnemonic_copied', locale));
     }
   };
 
@@ -145,8 +148,8 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
     try {
       if (wallet?.mnemonic) {
         await Share.share({
-          message: `My wallet mnemonic (keep this secure): ${wallet.mnemonic}`,
-          title: 'Wallet Backup'
+          message: `${t('wallet_setup_share_message', locale)}${wallet.mnemonic}`,
+          title: t('wallet_setup_share_title', locale)
         });
       }
     } catch (error) {
@@ -158,7 +161,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
     if (wallet?.mnemonic && confirmMnemonic.trim() === wallet.mnemonic) {
       setCurrentStep('complete');
     } else {
-      Alert.alert('Error', 'Mnemonic phrases do not match. Please try again.');
+      Alert.alert(t('wallet_setup_error', locale), t('wallet_setup_mnemonic_mismatch', locale));
     }
   };
 
@@ -212,6 +215,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       color: theme.colors.text,
       textAlign: 'center',
       marginBottom: 16,
+      writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
     },
     subtitle: {
       fontSize: 16,
@@ -220,6 +224,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       lineHeight: 24,
       marginBottom: 32,
       paddingHorizontal: 16,
+      writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
     },
     toastContainer: {
       position: 'absolute',
@@ -416,9 +421,9 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       <View style={styles.iconContainer}>
         <Icon name="account-balance-wallet" size={64} color={theme.colors.primary} />
       </View>
-      <Text style={styles.title}>Set Up Your Wallet</Text>
+      <Text style={styles.title}>{t('wallet_setup_set_up_wallet', locale)}</Text>
       <Text style={styles.subtitle}>
-        Create a new non-custodial wallet or import an existing one. You have full control of your private keys.
+        {t('wallet_setup_description', locale)}
       </Text>
       
       <View style={styles.buttonContainer}>
@@ -431,12 +436,12 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
           {creating ? (
             <>
               <ActivityIndicator size="small" color={theme.colors.white} />
-              <Text style={styles.primaryButtonText}> Creating wallet...</Text>
+              <Text style={styles.primaryButtonText}> {t('wallet_setup_creating', locale)}</Text>
             </>
           ) : (
             <>
               <Icon name="add-circle" size={24} color={theme.colors.white} />
-              <Text style={styles.primaryButtonText}>Create New Wallet</Text>
+              <Text style={styles.primaryButtonText}>{t('wallet_setup_create_new', locale)}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -448,7 +453,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
           disabled={loading || creating}
         >
           <Icon name="download" size={24} color={theme.colors.primary} />
-          <Text style={styles.secondaryButtonText}>Import Existing Wallet</Text>
+          <Text style={styles.secondaryButtonText}>{t('wallet_setup_import_existing', locale)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -460,30 +465,30 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       <View style={styles.iconContainer}>
         <Icon name="security" size={64} color={theme.colors.warning} />
       </View>
-      <Text style={styles.title}>Backup Your Wallet</Text>
+      <Text style={styles.title}>{t('wallet_setup_backup_title', locale)}</Text>
       <Text style={styles.subtitle}>
-        Write down these 12 words in the exact order shown. This is your recovery phrase - keep it safe and never share it.
+        {t('wallet_setup_backup_description', locale)}
       </Text>
 
       <View style={styles.mnemonicContainer}>
-        <Text style={styles.mnemonicText}>{wallet?.mnemonic || 'Generating...'}</Text>
+        <Text style={styles.mnemonicText}>{wallet?.mnemonic || t('wallet_setup_generating', locale)}</Text>
       </View>
 
       <View style={styles.mnemonicActions}>
         <TouchableOpacity style={styles.actionButton} onPress={handleCopyMnemonic}>
           <Icon name="content-copy" size={20} color={theme.colors.primary} />
-          <Text style={styles.actionButtonText}>Copy</Text>
+          <Text style={styles.actionButtonText}>{t('wallet_setup_copy', locale)}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={handleShareMnemonic}>
           <Icon name="share" size={20} color={theme.colors.primary} />
-          <Text style={styles.actionButtonText}>Share</Text>
+          <Text style={styles.actionButtonText}>{t('wallet_setup_share', locale)}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.warningContainer}>
         <Icon name="warning" size={20} color={theme.colors.warning} />
         <Text style={styles.warningText}>
-          Never share your recovery phrase. Anyone with these words can access your wallet.
+          {t('wallet_setup_warning_text', locale)}
         </Text>
       </View>
 
@@ -492,7 +497,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
         onPress={() => setCurrentStep('confirm')}
         activeOpacity={0.8}
       >
-        <Text style={styles.primaryButtonText}>I've Backed It Up</Text>
+        <Text style={styles.primaryButtonText}>{t('wallet_setup_backed_up', locale)}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -502,14 +507,14 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       <View style={styles.iconContainer}>
         <Icon name="check-circle" size={64} color={theme.colors.success} />
       </View>
-      <Text style={styles.title}>Confirm Your Recovery Phrase</Text>
+      <Text style={styles.title}>{t('wallet_setup_confirm_title', locale)}</Text>
       <Text style={styles.subtitle}>
-        Please enter your 12-word recovery phrase to confirm you've backed it up correctly.
+        {t('wallet_setup_confirm_description', locale)}
       </Text>
 
       <TextInput
         style={styles.mnemonicInput}
-        placeholder="Enter your 12-word recovery phrase..."
+        placeholder={t('wallet_setup_confirm_placeholder', locale)}
         placeholderTextColor={theme.colors.textSecondary}
         value={confirmMnemonic}
         onChangeText={setConfirmMnemonic}
@@ -524,7 +529,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
         disabled={confirmMnemonic.trim().split(' ').length !== 12}
         activeOpacity={0.8}
       >
-        <Text style={styles.primaryButtonText}>Confirm & Create Wallet</Text>
+        <Text style={styles.primaryButtonText}>{t('wallet_setup_confirm_create', locale)}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -534,16 +539,16 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       <View style={styles.iconContainer}>
         <Icon name="download" size={64} color={theme.colors.primary} />
       </View>
-      <Text style={styles.title}>Import Your Wallet</Text>
+      <Text style={styles.title}>{t('wallet_setup_import_title', locale)}</Text>
       <Text style={styles.subtitle}>
-        Choose how you'd like to import your existing wallet.
+        {t('wallet_setup_import_description', locale)}
       </Text>
 
       <View style={styles.importOptions}>
-        <Text style={styles.importLabel}>Recovery Phrase (12 words)</Text>
+        <Text style={styles.importLabel}>{t('wallet_setup_recovery_phrase', locale)}</Text>
         <TextInput
           style={styles.importInput}
-          placeholder="Enter your 12-word recovery phrase..."
+          placeholder={t('wallet_setup_recovery_placeholder', locale)}
           placeholderTextColor={theme.colors.textSecondary}
           value={importMnemonic}
           onChangeText={setImportMnemonic}
@@ -562,7 +567,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
               <ActivityIndicator size="small" color={theme.colors.white} />
             )}
             <Text style={[styles.importButtonText, importingMnemonic && styles.buttonContentText]}>
-              {importingMnemonic ? 'Importing...' : 'Import from Recovery Phrase'}
+              {importingMnemonic ? t('wallet_setup_importing', locale) : t('wallet_setup_import_from_phrase', locale)}
             </Text>
           </View>
         </TouchableOpacity>
@@ -577,9 +582,9 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
       <View style={styles.iconContainer}>
         <Icon name="check-circle" size={64} color={theme.colors.success} />
       </View>
-      <Text style={styles.title}>Wallet Created Successfully!</Text>
+      <Text style={styles.title}>{t('wallet_setup_complete_title', locale)}</Text>
       <Text style={styles.subtitle}>
-        Your non-custodial wallet is ready. You have full control of your private keys and funds.
+        {t('wallet_setup_complete_description', locale)}
       </Text>
 
       <TouchableOpacity
@@ -587,7 +592,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
         onPress={handleWalletSetupComplete}
         activeOpacity={0.8}
       >
-        <Text style={styles.primaryButtonText}>Go to Dashboard</Text>
+        <Text style={styles.primaryButtonText}>{t('wallet_setup_go_dashboard', locale)}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -619,7 +624,7 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
         ) : (
           <View style={styles.placeholder} />
         )}
-        <Text style={styles.headerTitle}>Wallet Setup</Text>
+        <Text style={styles.headerTitle}>{t('wallet_setup_title', locale)}</Text>
         <View style={styles.placeholder} />
       </View>
 

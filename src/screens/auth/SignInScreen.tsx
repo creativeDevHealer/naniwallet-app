@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
+import { t } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 
@@ -23,6 +25,7 @@ const { width, height } = Dimensions.get('window');
 
 export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,13 +36,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
   // Handle Android back button to exit app
   useEffect(() => {
     const backAction = () => {
-      Alert.alert('Exit App', 'Are you sure you want to exit?', [
+      Alert.alert(t('exit_app', locale), t('exit_app_confirm', locale), [
         {
-          text: 'Cancel',
+          text: t('cancel', locale),
           onPress: () => null,
           style: 'cancel',
         },
-        { text: 'YES', onPress: () => BackHandler.exitApp() },
+        { text: t('yes', locale).toUpperCase(), onPress: () => BackHandler.exitApp() },
       ]);
       return true;
     };
@@ -56,15 +59,15 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
     const newErrors: { [key: string]: string } = {};
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('email_required', locale);
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = t('email_invalid', locale);
     }
 
     if (!password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('password_required', locale);
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('password_min_length', locale);
     }
 
     setErrors(newErrors);
@@ -78,7 +81,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
     try {
       await signIn(email, password);
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message);
+      Alert.alert(t('sign_in_failed', locale), error.message);
     } finally {
       setIsLoading(false);
     }
@@ -181,16 +184,16 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         >
           <View style={styles.modalContainer}>
             <View style={styles.header}>
-              <Text style={styles.title}>Sign In</Text>
+              <Text style={styles.title}>{t('sign_in', locale)}</Text>
             </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>{t('email', locale)}</Text>
                 <Input
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Input Your Email"
+                  placeholder={t('input_email_placeholder', locale)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   error={errors.email}
@@ -198,11 +201,11 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('password', locale)}</Text>
                 <Input
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Enter your password"
+                  placeholder={t('enter_password_placeholder', locale)}
                   secureTextEntry
                   error={errors.password}
                 />
@@ -210,7 +213,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
               <View style={styles.signInButton}>
                 <Button
-                  title="Sign In"
+                  title={t('sign_in', locale)}
                   onPress={handleEmailSignIn}
                   loading={isLoading}
                   fullWidth
@@ -222,12 +225,12 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>
-                Don't have an account?{' '}
+                {t('no_account', locale)}{' '}
                 <Text
                   style={styles.footerLink}
                   onPress={() => navigation.navigate('SignUp')}
                 >
-                  Create One
+                  {t('create_one', locale)}
                 </Text>
               </Text>
             </View>

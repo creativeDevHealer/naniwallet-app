@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../../context/ThemeContext';
+import { useLocale } from '../../context/LocaleContext';
+import { isRTL, getTextAlign } from '../../i18n';
 
 interface InputProps {
   label?: string;
@@ -51,6 +53,7 @@ export const Input: React.FC<InputProps> = ({
   autoFocus = false,
 }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(!secureTextEntry);
 
@@ -64,10 +67,12 @@ export const Input: React.FC<InputProps> = ({
     fontWeight: '500',
     color: theme.colors.text,
     marginBottom: 8,
+    textAlign: getTextAlign(locale, 'left'),
+    writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
   };
 
   const inputContainerStyle: ViewStyle = {
-    flexDirection: 'row',
+    flexDirection: isRTL(locale) ? 'row-reverse' : 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: error ? theme.colors.error : isFocused ? theme.colors.primary : theme.colors.border,
@@ -82,6 +87,8 @@ export const Input: React.FC<InputProps> = ({
     fontSize: 16,
     color: theme.colors.text,
     paddingVertical: 12,
+    textAlign: getTextAlign(locale, 'left'),
+    writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
     ...inputStyle,
   };
 
@@ -89,11 +96,22 @@ export const Input: React.FC<InputProps> = ({
     fontSize: 12,
     color: theme.colors.error,
     marginTop: 4,
+    textAlign: getTextAlign(locale, 'left'),
+    writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
   };
 
-  const iconStyle = {
-    marginRight: leftIcon ? 8 : 0,
-    marginLeft: rightIcon ? 8 : 0,
+  const getIconStyle = (isLeft: boolean) => {
+    if (isRTL(locale)) {
+      return {
+        marginLeft: isLeft ? 8 : 0,
+        marginRight: !isLeft ? 8 : 0,
+      };
+    } else {
+      return {
+        marginRight: isLeft ? 8 : 0,
+        marginLeft: !isLeft ? 8 : 0,
+      };
+    }
   };
 
   const handleRightIconPress = () => {
@@ -120,7 +138,7 @@ export const Input: React.FC<InputProps> = ({
             name={leftIcon}
             size={20}
             color={theme.colors.textSecondary}
-            style={iconStyle}
+            style={getIconStyle(true)}
           />
         )}
         <TextInput
@@ -140,7 +158,7 @@ export const Input: React.FC<InputProps> = ({
           autoFocus={autoFocus}
         />
         {(rightIcon || secureTextEntry) && (
-          <TouchableOpacity onPress={handleRightIconPress} style={iconStyle}>
+          <TouchableOpacity onPress={handleRightIconPress} style={getIconStyle(false)}>
             <Icon
               name={getRightIcon() || 'help'}
               size={20}

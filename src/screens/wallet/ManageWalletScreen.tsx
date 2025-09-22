@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
+import { useLocale } from '../../context/LocaleContext';
+import { t } from '../../i18n';
 
 interface WalletRow {
   id: string;
@@ -15,6 +17,7 @@ interface WalletRow {
 
 export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const { wallet, wallets, removeWallet } = useWeb3Auth();
   const [items, setItems] = useState<WalletRow[]>([]);
 
@@ -57,12 +60,12 @@ export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }
         style={styles.iconBtn}
         onPress={() => {
           Alert.alert(
-            'Disconnect Wallet',
-            'Are you sure you want to disconnect this wallet?',
+            t('wallet_manage_disconnect', locale),
+            t('wallet_manage_disconnect_confirm', locale),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('wallet_manage_cancel', locale), style: 'cancel' },
               {
-                text: 'Disconnect',
+                text: t('wallet_manage_disconnect_action', locale),
                 style: 'destructive',
                 onPress: async () => {
                   try {
@@ -92,7 +95,7 @@ export const ManageWalletScreen: React.FC<{ navigation: any }> = ({ navigation }
         <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Manage Wallet</Text>
+        <Text style={styles.title}>{t('wallet_manage_title', locale)}</Text>
         <View style={styles.placeholderRight} />
       </View>
 

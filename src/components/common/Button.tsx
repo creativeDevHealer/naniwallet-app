@@ -7,6 +7,8 @@ import {
   TextStyle,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import { useLocale } from '../../context/LocaleContext';
+import { isRTL, getTextAlign } from '../../i18n';
 
 interface ButtonProps {
   title: string;
@@ -32,6 +34,7 @@ export const Button: React.FC<ButtonProps> = ({
   fullWidth = false,
 }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
@@ -88,6 +91,7 @@ export const Button: React.FC<ButtonProps> = ({
     const baseTextStyle: TextStyle = {
       fontWeight: '600',
       textAlign: 'center',
+      writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
     };
 
     // Size text styles

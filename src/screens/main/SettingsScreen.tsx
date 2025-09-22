@@ -167,7 +167,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           >
             <View style={styles.listItemLeft}>
               <Icon name="account-balance" size={22} color={theme.colors.text} style={styles.listIcon} />
-              <Text style={styles.listLabel}>Payment methods</Text>
+              <Text style={styles.listLabel}>{t('payment_methods', locale)}</Text>
             </View>
             <Icon name="chevron-right" size={22} color={theme.colors.textSecondary} />
           </TouchableOpacity>
@@ -218,7 +218,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) =>
           >
             <View style={styles.signOutRow}>
               <Icon name="logout" size={20} color={theme.colors.error} />
-              <Text style={styles.signOutText}>Sign Out</Text>
+              <Text style={styles.signOutText}>{t('sign_out', locale)}</Text>
             </View>
           </TouchableOpacity>
         </View>

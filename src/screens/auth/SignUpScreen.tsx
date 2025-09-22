@@ -9,9 +9,12 @@ import {
   Alert,
   Modal,
   Dimensions,
+  ScrollView,
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useLocale } from '../../context/LocaleContext';
+import { t, isRTL, getTextAlign } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -25,6 +28,7 @@ const { width, height } = Dimensions.get('window');
 
 export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,29 +43,29 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     const newErrors: { [key: string]: string } = {};
 
     if (!fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = t('full_name_required', locale);
     }
 
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('email_required', locale);
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Please enter a valid email';
+      newErrors.email = t('email_invalid', locale);
     }
 
     if (!password.trim()) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('password_required', locale);
     } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('password_min_length', locale);
     }
 
     if (!confirmPassword.trim()) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = t('confirm_password_required', locale);
     } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('passwords_no_match', locale);
     }
 
     if (!acceptTerms) {
-      newErrors.terms = 'You must accept the terms and conditions';
+      newErrors.terms = t('terms_required', locale);
     }
 
     setErrors(newErrors);
@@ -89,7 +93,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       });
     } catch (error: any) {
       console.error('❌ Signup error:', error);
-      Alert.alert('Failed to Send OTP', error.message || 'Please try again later.');
+      Alert.alert(t('failed_send_otp', locale), error.message || t('try_again_later', locale));
     } finally {
       setIsLoading(false);
     }
@@ -126,9 +130,15 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       elevation: 20,
       borderWidth: theme.isDark ? 0 : 1,
       borderColor: theme.isDark ? 'transparent' : theme.colors.border,
+      flex: 1,
+    },
+    scrollContainer: {
+      flex: 1,
+      marginBottom: 16,
     },
     scrollContent: {
       flexGrow: 1,
+      paddingBottom: 20,
     },
     header: {
       alignItems: 'center',
@@ -156,7 +166,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       lineHeight: 20,
     },
     form: {
-      marginBottom: 24,
+      flex: 1,
     },
     inputGroup: {
       marginBottom: 16,
@@ -168,7 +178,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       marginBottom: 8,
     },
     termsContainer: {
-      flexDirection: 'row',
+      flexDirection: isRTL(locale) ? 'row-reverse' : 'row',
       alignItems: 'flex-start',
       marginVertical: 16,
     },
@@ -197,6 +207,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
       fontSize: 14,
       color: theme.colors.textSecondary,
       lineHeight: 20,
+      textAlign: getTextAlign(locale, 'left'),
+      writingDirection: isRTL(locale) ? 'rtl' : 'ltr',
     },
     termsLink: {
       color: theme.colors.primary,
@@ -245,29 +257,35 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
               >
                 <Icon name="arrow-back" size={24} color={theme.colors.text} />
               </TouchableOpacity>
-              <Text style={styles.title}>Create Account</Text>
+              <Text style={styles.title}>{t('create_account', locale)}</Text>
               <Text style={styles.subtitle}>
-                Join Nani Wallet for secure and Halal financial management
+                {t('nani_wallet_description', locale)}
               </Text>
             </View>
 
-            <View style={styles.form}>
+            <ScrollView 
+              style={styles.scrollContainer}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
+                <Text style={styles.label}>{t('full_name', locale)}</Text>
                 <Input
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder="Enter your full name"
+                  placeholder={t('enter_full_name_placeholder', locale)}
                   error={errors.fullName}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>{t('email_address', locale)}</Text>
                 <Input
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="Enter your email"
+                  placeholder={t('enter_email_placeholder', locale)}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   error={errors.email}
@@ -275,22 +293,22 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t('password', locale)}</Text>
                 <Input
                   value={password}
                   onChangeText={setPassword}
-                  placeholder="Create a password"
+                  placeholder={t('create_password_placeholder', locale)}
                   secureTextEntry
                   error={errors.password}
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Confirm Password</Text>
+                <Text style={styles.label}>{t('confirm_password', locale)}</Text>
                 <Input
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="Confirm your password"
+                  placeholder={t('confirm_password_placeholder', locale)}
                   secureTextEntry
                   error={errors.confirmPassword}
                 />
@@ -304,33 +322,33 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                   {acceptTerms && <Text style={styles.checkboxText}>✓</Text>}
                 </View>
                 <Text style={styles.termsText}>
-                  I agree to the{' '}
-                  <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-                  <Text style={styles.termsLink}>Privacy Policy</Text>
+                  {t('i_agree_to', locale)}{' '}
+                  <Text style={styles.termsLink}>{t('terms_of_service', locale)}</Text> {t('and', locale)}{' '}
+                  <Text style={styles.termsLink}>{t('privacy_policy', locale)}</Text>
                 </Text>
               </TouchableOpacity>
               {errors.terms && <Text style={styles.errorText}>{errors.terms}</Text>}
 
               <View style={styles.signUpButton}>
                 <Button
-                  title="Create Account"
+                  title={t('create_account', locale)}
                   onPress={handleEmailSignUp}
                   loading={isLoading}
                   fullWidth
                   size="large"
                 />
               </View>
-            </View>
-
+              </View>
+            </ScrollView>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>
-                Already have an account?{' '}
+                {t('have_account', locale)}{' '}
                 <Text
                   style={styles.footerLink}
                   onPress={() => navigation.navigate('SignIn')}
                 >
-                  Sign In
+                  {t('sign_in_here', locale)}
                 </Text>
               </Text>
             </View>

@@ -1,4 +1,5 @@
 import { LocaleCode } from '../context/LocaleContext';
+import { useLocale } from '../context/LocaleContext';
 
 type Messages = Record<string, string>;
 type Bundle = Record<LocaleCode, Messages>;
@@ -10,6 +11,10 @@ export const messages: Bundle = {
     quick_actions: 'Quick Actions',
     account_information: 'Account Information',
     email: 'Email',
+    password: 'Password',
+    full_name: 'Full Name',
+    email_address: 'Email Address',
+    confirm_password: 'Confirm Password',
     phone: 'Phone',
     email_verified: 'Email Verified',
     yes: 'Yes',
@@ -48,9 +53,171 @@ export const messages: Bundle = {
     no_payment_methods: 'No payment methods added yet',
     add_payment_method: 'Add Payment Method',
     add_new_payment_method: 'Add New Payment Method',
+    payment_methods_placeholder: 'Add or manage your payment methods.',
     processing: 'Processing',
     wallet_address: 'Wallet Address',
     top_up: 'Top Up',
+    
+    // KYC Camera Screen
+    kyc_camera_permission_needed: 'Permission needed',
+    kyc_camera_permission_message: 'Camera access is required to capture your document.',
+    kyc_camera_error: 'Error',
+    kyc_camera_not_ready: 'Camera not ready. Please wait a moment and try again.',
+    kyc_camera_error_title: 'Camera Error',
+    kyc_camera_failed_photo: 'Failed to take photo. ',
+    kyc_camera_capture_failed: 'Camera capture failed. Please try again.',
+    kyc_camera_crop_failed: 'Failed to crop the image. Please try again.',
+    kyc_camera_check_permissions: 'Please try again or check camera permissions.',
+    kyc_camera_try_again: 'Try Again',
+    kyc_camera_go_back: 'Go Back',
+    kyc_camera_ok: 'OK',
+    kyc_camera_no_device: 'No camera device found.',
+    kyc_camera_permission_required: 'Camera permission is required.',
+    kyc_camera_grant_permission: 'Grant Permission',
+    kyc_camera_passport: 'Passport',
+    kyc_camera_driver_license: 'Driver License',
+    kyc_camera_id_card: 'ID Card',
+    kyc_camera_front_side: 'Front Side',
+    kyc_camera_back_side: 'Back Side',
+    kyc_camera_align_passport: 'Align your passport page',
+    kyc_camera_align_id: 'Align your ID inside the frame',
+    kyc_camera_hint_subtitle: 'Make sure details are readable and avoid glare.',
+    kyc_camera_toggle_torch: 'Toggle torch',
+    
+    // Wallet Setup Flow
+    wallet_setup_title: 'Wallet Setup',
+    wallet_setup_set_up_wallet: 'Set Up Your Wallet',
+    wallet_setup_description: 'Create a new non-custodial wallet or import an existing one. You have full control of your private keys.',
+    wallet_setup_create_new: 'Create New Wallet',
+    wallet_setup_import_existing: 'Import Existing Wallet',
+    wallet_setup_creating: 'Creating wallet...',
+    wallet_setup_error: 'Error',
+    wallet_setup_failed_create: 'Failed to create wallet',
+    wallet_setup_backup_title: 'Backup Your Wallet',
+    wallet_setup_backup_description: 'Write down these 12 words in the exact order shown. This is your recovery phrase - keep it safe and never share it.',
+    wallet_setup_generating: 'Generating...',
+    wallet_setup_copy: 'Copy',
+    wallet_setup_share: 'Share',
+    wallet_setup_warning_text: 'Never share your recovery phrase. Anyone with these words can access your wallet.',
+    wallet_setup_backed_up: "I've Backed It Up",
+    wallet_setup_confirm_title: 'Confirm Your Recovery Phrase',
+    wallet_setup_confirm_description: 'Please enter your 12-word recovery phrase to confirm you\'ve backed it up correctly.',
+    wallet_setup_confirm_placeholder: 'Enter your 12-word recovery phrase...',
+    wallet_setup_confirm_create: 'Confirm & Create Wallet',
+    wallet_setup_import_title: 'Import Your Wallet',
+    wallet_setup_import_description: 'Choose how you\'d like to import your existing wallet.',
+    wallet_setup_recovery_phrase: 'Recovery Phrase (12 words)',
+    wallet_setup_recovery_placeholder: 'Enter your 12-word recovery phrase...',
+    wallet_setup_import_from_phrase: 'Import from Recovery Phrase',
+    wallet_setup_importing: 'Importing...',
+    wallet_setup_invalid_mnemonic: 'Invalid Mnemonic',
+    wallet_setup_invalid_mnemonic_message: 'Please enter a valid 12-word mnemonic phrase',
+    wallet_setup_import_success: 'Wallet imported successfully',
+    wallet_setup_import_failed: 'Failed to import wallet',
+    wallet_setup_complete_title: 'Wallet Created Successfully!',
+    wallet_setup_complete_description: 'Your non-custodial wallet is ready. You have full control of your private keys and funds.',
+    wallet_setup_go_dashboard: 'Go to Dashboard',
+    wallet_setup_mnemonic_copied: 'Mnemonic phrase copied to clipboard',
+    wallet_setup_share_title: 'Wallet Backup',
+    wallet_setup_share_message: 'My wallet mnemonic (keep this secure): ',
+    wallet_setup_mnemonic_mismatch: 'Mnemonic phrases do not match. Please try again.',
+    
+    // Wallet Selection & Management
+    wallet_select_title: 'Select Wallet',
+    wallet_select_add: 'Add Wallet',
+    wallet_select_manage: 'Manage',
+    wallet_manage_title: 'Manage Wallet',
+    wallet_manage_disconnect: 'Disconnect Wallet',
+    wallet_manage_disconnect_confirm: 'Are you sure you want to disconnect this wallet?',
+    wallet_manage_cancel: 'Cancel',
+    wallet_manage_disconnect_action: 'Disconnect',
+    
+    // Authentication
+    sign_out: 'Sign Out',
+    sign_in: 'Sign In',
+    sign_up: 'Sign Up',
+    create_account: 'Create Account',
+    exit_app: 'Exit App',
+    exit_app_confirm: 'Are you sure you want to exit?',
+    
+    // Form Fields
+    email_required: 'Email is required',
+    email_invalid: 'Please enter a valid email',
+    password_required: 'Password is required',
+    password_min_length: 'Password must be at least 6 characters',
+    full_name_required: 'Full name is required',
+    confirm_password_required: 'Please confirm your password',
+    passwords_no_match: 'Passwords do not match',
+    terms_required: 'You must accept the terms and conditions',
+    
+    // Form Placeholders
+    input_email_placeholder: 'Input Your Email',
+    enter_password_placeholder: 'Enter your password',
+    enter_full_name_placeholder: 'Enter your full name',
+    enter_email_placeholder: 'Enter your email',
+    create_password_placeholder: 'Create a password',
+    confirm_password_placeholder: 'Confirm your password',
+    
+    // Auth Errors
+    sign_in_failed: 'Sign In Failed',
+    failed_send_otp: 'Failed to Send OTP',
+    try_again_later: 'Please try again later.',
+    invalid_code: 'Invalid Code',
+    invalid_code_message: 'Please enter a valid 6-digit code',
+    verification_failed: 'Verification Failed',
+    max_attempts_exceeded: 'Maximum attempts exceeded',
+    code_sent: 'Code Sent',
+    code_sent_message: 'A new verification code has been sent to',
+    failed_resend: 'Failed to Resend',
+    
+    // Sign In/Up Footer
+    no_account: "Don't have an account?",
+    create_one: 'Create One',
+    have_account: 'Already have an account?',
+    sign_in_here: 'Sign In',
+    
+    // Terms and Privacy
+    i_agree_to: 'I agree to the',
+    terms_of_service: 'Terms of Service',
+    and: 'and',
+    privacy_policy: 'Privacy Policy',
+    
+    // Home Screen
+    account_verification: 'Account Verification',
+    kyc_verified: 'KYC Verified',
+    kyc_under_review: 'KYC Under Review',
+    kyc_rejected: 'KYC Rejected',
+    kyc_pending: 'KYC Pending',
+    account_verification_required: 'Account Verification Required',
+    kyc_verification_message: 'Please complete your KYC verification to access all features of Nani Wallet.',
+    kyc_banner_pending: 'Your KYC verification is under review. Some features may be limited.',
+    kyc_banner_not_started: 'Complete your KYC verification to unlock all wallet features.',
+    kyc_description_pending: 'We\'re reviewing your documents. This usually takes 1-3 business days.',
+    kyc_description_rejected: 'Your verification was rejected. Please retry with correct documents.',
+    kyc_description_not_started: 'Complete your verification to access all wallet features.',
+    start_verification: 'Start Verification',
+    start: 'Start',
+    retry: 'Retry',
+    nani_wallet_title: 'Nani Wallet',
+    nani_wallet_description: 'Your trusted partner for Halal financial management and Islamic banking solutions.',
+    zakat_calculator: 'Zakat Calculator',
+    investments: 'Investments',
+    
+    // Preferences
+    primary_color: 'Primary Color',
+    
+    // Wallet Dashboard
+    all_network: 'All Network',
+    disconnect_wallet: 'Disconnect Wallet',
+    disconnect_wallet_confirm: 'Are you sure you want to disconnect your wallet?',
+    cancel: 'Cancel',
+    disconnect: 'Disconnect',
+    error: 'Error',
+    failed_disconnect_wallet: 'Failed to disconnect wallet',
+    no_address: 'No Address',
+    wallet: 'Wallet',
+    address_copied: 'Address copied to clipboard',
+    coming_soon: 'Coming soon',
   },
   so: {
     welcome_back: 'Ku soo dhowow,',
@@ -58,6 +225,10 @@ export const messages: Bundle = {
     quick_actions: 'Ficillo Degdeg ah',
     account_information: 'Macluumaadka Akoonka',
     email: 'Email',
+    password: 'Password',
+    full_name: 'Magaca Buuxa',
+    email_address: 'Cinwaanka Email',
+    confirm_password: 'Xaqiiji Password',
     phone: 'Taleefan',
     email_verified: 'Email la xaqiijiyay',
     yes: 'Haa',
@@ -96,9 +267,171 @@ export const messages: Bundle = {
     no_payment_methods: 'Weli lama dheerin hababka lacag bixinta',
     add_payment_method: 'Ku Dar Habka Lacag Bixinta',
     add_new_payment_method: 'Ku Dar Hab Cusub oo Lacag Bixinta',
+    payment_methods_placeholder: 'Ku dar ama maamul hababka lacag bixintaada.',
     processing: 'Habaynta',
     wallet_address: 'Cinwaanka Boorsada',
     top_up: 'Ku Dar',
+    
+    // KYC Camera Screen
+    kyc_camera_permission_needed: 'Ogolaansho loo baahan yahay',
+    kyc_camera_permission_message: 'Helitaanka kaameeradda ayaa loo baahan yahay si aad u sawirto dukumeentiyaadka.',
+    kyc_camera_error: 'Qalad',
+    kyc_camera_not_ready: 'Kaameeraddu ma diyaar ahan. Fadlan dhawr daqiiqo sug oo isku day mar kale.',
+    kyc_camera_error_title: 'Qalad Kaameerad',
+    kyc_camera_failed_photo: 'Sawirka qaadashada ayaa fashilantay. ',
+    kyc_camera_capture_failed: 'Sawir qaadashada kaameerad ayaa fashilantay. Fadlan isku day mar kale.',
+    kyc_camera_crop_failed: 'Sawirka googooynta ayaa fashilantay. Fadlan isku day mar kale.',
+    kyc_camera_check_permissions: 'Fadlan isku day mar kale ama hubi ogolaanshaha kaameeradda.',
+    kyc_camera_try_again: 'Isku Day Mar Kale',
+    kyc_camera_go_back: 'Dib U Noqo',
+    kyc_camera_ok: 'Haa',
+    kyc_camera_no_device: 'Aaladda kaameeradda lama helin.',
+    kyc_camera_permission_required: 'Ogolaansha kaameeradda ayaa loo baahan yahay.',
+    kyc_camera_grant_permission: 'Ogolaansho Sii',
+    kyc_camera_passport: 'Baasaboor',
+    kyc_camera_driver_license: 'Shatiga Wadista',
+    kyc_camera_id_card: 'Kaardhka Aqoonsiga',
+    kyc_camera_front_side: 'Dhinaca Hore',
+    kyc_camera_back_side: 'Dhinaca Dambe',
+    kyc_camera_align_passport: 'Ku hagaaji bogga baasaboorkaaga',
+    kyc_camera_align_id: 'Ku hagaaji aqoonsigaaga gudaha sanduuqa',
+    kyc_camera_hint_subtitle: 'Hubi in faahfaahinta la akhrisan karo lagana fogaado dhalaalka.',
+    kyc_camera_toggle_torch: 'Ku shida/dami laydka',
+    
+    // Wallet Setup Flow
+    wallet_setup_title: 'Dejinta Boorsada',
+    wallet_setup_set_up_wallet: 'Deji Boorsadaada',
+    wallet_setup_description: 'Abuur boorso cusub oo aan la xukumin ama soo dejiso mid hore. Waxaad si buuxda u xukuntaa fureyaashaaga gaarka ah.',
+    wallet_setup_create_new: 'Abuur Boorso Cusub',
+    wallet_setup_import_existing: 'Soo Dejiso Boorso Hore',
+    wallet_setup_creating: 'Boorsada la abuurayo...',
+    wallet_setup_error: 'Qalad',
+    wallet_setup_failed_create: 'Abuurista boorsada ayaa fashilantay',
+    wallet_setup_backup_title: 'Kaydso Boorsadaada',
+    wallet_setup_backup_description: 'Qor 12-ka eray ee kala duwan sida la tusay. Tani waa weedhahaaga soo celinta - ammaan u hay hana la wadaagin qof kale.',
+    wallet_setup_generating: 'La diyaargaraynayo...',
+    wallet_setup_copy: 'Nuqul',
+    wallet_setup_share: 'Wadaag',
+    wallet_setup_warning_text: 'Waligiiba ha la wadaagin weedhahaaga soo celinta. Qof kasta oo haysta erayadan wuu geli karaa boorsadaada.',
+    wallet_setup_backed_up: 'Waan Kaydiyay',
+    wallet_setup_confirm_title: 'Xaqiiji Weedhahaaga Soo Celinta',
+    wallet_setup_confirm_description: 'Fadlan geli 12-ka eray ee soo celinta si aad u xaqiijiso inaad si sax ah u kaydisay.',
+    wallet_setup_confirm_placeholder: 'Geli 12-ka eray ee soo celinta...',
+    wallet_setup_confirm_create: 'Xaqiiji oo Abuur Boorsada',
+    wallet_setup_import_title: 'Soo Dejiso Boorsadaada',
+    wallet_setup_import_description: 'Dooro sida aad u doonayso inaad soo dejiso boorsadaada jirta.',
+    wallet_setup_recovery_phrase: 'Weedhaaha Soo Celinta (12 eray)',
+    wallet_setup_recovery_placeholder: 'Geli 12-ka eray ee soo celinta...',
+    wallet_setup_import_from_phrase: 'Ka Soo Dejiso Weedhaaha Soo Celinta',
+    wallet_setup_importing: 'Soo dejinaya...',
+    wallet_setup_invalid_mnemonic: 'Weedhaha Aan Saxayn',
+    wallet_setup_invalid_mnemonic_message: 'Fadlan geli weedho sax ah oo 12 eray ah',
+    wallet_setup_import_success: 'Boorsada si guul leh ayaa loo soo dejiyay',
+    wallet_setup_import_failed: 'Soo dejinta boorsada ayaa fashilantay',
+    wallet_setup_complete_title: 'Boorsada Si Guul leh Ayaa Loo Abuuray!',
+    wallet_setup_complete_description: 'Boorsadaada aan la xukumin way diyaar tahay. Waxaad si buuxda u xukuntaa fureyaashaaga gaarka ah iyo lacagtaada.',
+    wallet_setup_go_dashboard: 'Aad Dashboard-ka',
+    wallet_setup_mnemonic_copied: 'Weedhaaha soo celinta ayaa loo nuqlay clipboard-ka',
+    wallet_setup_share_title: 'Kaydinta Boorsada',
+    wallet_setup_share_message: 'Weedhaahayga boorsada (ammaan u hay): ',
+    wallet_setup_mnemonic_mismatch: 'Weedhaaha soo celinta ma isku mid ahan. Fadlan mar kale isku day.',
+    
+    // Wallet Selection & Management
+    wallet_select_title: 'Dooro Boorsada',
+    wallet_select_add: 'Ku Dar Boorso',
+    wallet_select_manage: 'Maamul',
+    wallet_manage_title: 'Maamul Boorsada',
+    wallet_manage_disconnect: 'Ka Gooy Boorsada',
+    wallet_manage_disconnect_confirm: 'Ma hubtaa inaad ka goyn rabto boorsadan?',
+    wallet_manage_cancel: 'Jooji',
+    wallet_manage_disconnect_action: 'Ka Gooy',
+    
+    // Authentication
+    sign_out: 'Ka Bax',
+    sign_in: 'Gal',
+    sign_up: 'Iscasilasho',
+    create_account: 'Abuur Akoon',
+    exit_app: 'Ka Bax App-ka',
+    exit_app_confirm: 'Ma hubtaa inaad ka baxayso?',
+    
+    // Form Fields
+    email_required: 'Email ayaa loo baahan yahay',
+    email_invalid: 'Fadlan geli email sax ah',
+    password_required: 'Password ayaa loo baahan yahay',
+    password_min_length: 'Password-ku waa inuu noqdaa ugu yaraan 6 xaraf',
+    full_name_required: 'Magaca buuxa ayaa loo baahan yahay',
+    confirm_password_required: 'Fadlan xaqiiji password-ka',
+    passwords_no_match: 'Password-yadu ma isku mid ahan',
+    terms_required: 'Waa inaad aqbashid shuruudaha iyo xaaladaha',
+    
+    // Form Placeholders
+    input_email_placeholder: 'Geli Email-kaaga',
+    enter_password_placeholder: 'Geli password-kaaga',
+    enter_full_name_placeholder: 'Geli magacaaga buuxa',
+    enter_email_placeholder: 'Geli email-kaaga',
+    create_password_placeholder: 'Abuur password',
+    confirm_password_placeholder: 'Xaqiiji password-ka',
+    
+    // Auth Errors
+    sign_in_failed: 'Galitaanka Waa Fashilantay',
+    failed_send_otp: 'Diritaanka OTP Waa Fashilantay',
+    try_again_later: 'Fadlan mar kale isku day goor dambe.',
+    invalid_code: 'Kood Aan Sax Ahayn',
+    invalid_code_message: 'Fadlan geli kood sax ah oo 6 tiro ah',
+    verification_failed: 'Xaqiijinta Waa Fashilantay',
+    max_attempts_exceeded: 'Tirada ugu badan ee isku dayga ayaa la dhaafay',
+    code_sent: 'Kood La Diray',
+    code_sent_message: 'Kood cusub oo xaqiijin ah ayaa loo diray',
+    failed_resend: 'Dib u Diritaanka Waa Fashilantay',
+    
+    // Sign In/Up Footer
+    no_account: 'Akoon ma lihid?',
+    create_one: 'Mid Abuur',
+    have_account: 'Akoon ma leedahay?',
+    sign_in_here: 'Halkan Gal',
+    
+    // Terms and Privacy
+    i_agree_to: 'Waxaan aqbalay',
+    terms_of_service: 'Shuruudaha Adeegga',
+    and: 'iyo',
+    privacy_policy: 'Qaanuunka Sirta',
+    
+    // Home Screen
+    account_verification: 'Xaqiijinta Akoonka',
+    kyc_verified: 'KYC La Xaqiijiyay',
+    kyc_under_review: 'KYC Waa La Eegayaa',
+    kyc_rejected: 'KYC Waa La Diiday',
+    kyc_pending: 'KYC Waa La Sugayaa',
+    account_verification_required: 'Xaqiijinta Akoonka Ayaa Loo Baahan Yahay',
+    kyc_verification_message: 'Fadlan dhammee xaqiijinta KYC-ga si aad u hesho dhammaan sifooyinka Nani Wallet.',
+    kyc_banner_pending: 'Xaqiijinta KYC-gaaga ayaa la eegayaa. Sifooyinka qaarkood way xaddidan yihiin.',
+    kyc_banner_not_started: 'Dhammee xaqiijinta KYC-ga si aad u furtid dhammaan sifooyinka boorsada.',
+    kyc_description_pending: 'Waxaan eegaynaa dukumeentiyaadka. Tani waxay qaadataa 1-3 maalmood shaqo.',
+    kyc_description_rejected: 'Xaqiijintaada waa la diiday. Fadlan mar kale isku day dukumeenti saxan.',
+    kyc_description_not_started: 'Dhammee xaqiijintaada si aad u hesho dhammaan sifooyinka boorsada.',
+    start_verification: 'Bilow Xaqiijinta',
+    start: 'Bilow',
+    retry: 'Mar Kale Isku Day',
+    nani_wallet_title: 'Nani Wallet',
+    nani_wallet_description: 'Lamaanaha aad ku kalsoon tahay maamulka maaliyadda Xalaal ah iyo xalalka bangiga Islaamka.',
+    zakat_calculator: 'Xisaabiyaha Zakada',
+    investments: 'Maalgashiyo',
+    
+    // Preferences
+    primary_color: 'Midabka Aasaasiga ah',
+    
+    // Wallet Dashboard
+    all_network: 'Dhammaan Shabakadaha',
+    disconnect_wallet: 'Ka Gooy Boorsada',
+    disconnect_wallet_confirm: 'Ma hubtaa inaad ka goyn rabto boorsadaada?',
+    cancel: 'Jooji',
+    disconnect: 'Ka Gooy',
+    error: 'Qalad',
+    failed_disconnect_wallet: 'Ka goynta boorsada ayaa fashilantay',
+    no_address: 'Cinwaan Ma Jiro',
+    wallet: 'Boorso',
+    address_copied: 'Cinwaanka ayaa loo nuqlay clipboard-ka',
+    coming_soon: 'Waa imanayaa dhowaan',
   },
   ar: {
     welcome_back: 'مرحباً بعودتك،',
@@ -106,6 +439,10 @@ export const messages: Bundle = {
     quick_actions: 'إجراءات سريعة',
     account_information: 'معلومات الحساب',
     email: 'البريد الإلكتروني',
+    password: 'كلمة المرور',
+    full_name: 'الاسم الكامل',
+    email_address: 'عنوان البريد الإلكتروني',
+    confirm_password: 'تأكيد كلمة المرور',
     phone: 'الهاتف',
     email_verified: 'تأكيد البريد الإلكتروني',
     yes: 'نعم',
@@ -144,9 +481,171 @@ export const messages: Bundle = {
     no_payment_methods: 'لم يتم إضافة طرق دفع بعد',
     add_payment_method: 'إضافة طريقة دفع',
     add_new_payment_method: 'إضافة طريقة دفع جديدة',
+    payment_methods_placeholder: 'إضافة أو إدارة طرق الدفع الخاصة بك.',
     processing: 'جاري المعالجة',
     wallet_address: 'عنوان المحفظة',
     top_up: 'شحن',
+    
+    // KYC Camera Screen
+    kyc_camera_permission_needed: 'إذن مطلوب',
+    kyc_camera_permission_message: 'الوصول للكاميرا مطلوب لالتقاط وثائقك.',
+    kyc_camera_error: 'خطأ',
+    kyc_camera_not_ready: 'الكاميرا غير جاهزة. يرجى الانتظار لحظة والمحاولة مرة أخرى.',
+    kyc_camera_error_title: 'خطأ في الكاميرا',
+    kyc_camera_failed_photo: 'فشل في التقاط الصورة. ',
+    kyc_camera_capture_failed: 'فشل في التقاط صورة الكاميرا. يرجى المحاولة مرة أخرى.',
+    kyc_camera_crop_failed: 'فشل في قص الصورة. يرجى المحاولة مرة أخرى.',
+    kyc_camera_check_permissions: 'يرجى المحاولة مرة أخرى أو التحقق من أذونات الكاميرا.',
+    kyc_camera_try_again: 'حاول مرة أخرى',
+    kyc_camera_go_back: 'العودة',
+    kyc_camera_ok: 'حسناً',
+    kyc_camera_no_device: 'لم يتم العثور على جهاز كاميرا.',
+    kyc_camera_permission_required: 'إذن الكاميرا مطلوب.',
+    kyc_camera_grant_permission: 'منح الإذن',
+    kyc_camera_passport: 'جواز السفر',
+    kyc_camera_driver_license: 'رخصة القيادة',
+    kyc_camera_id_card: 'بطاقة الهوية',
+    kyc_camera_front_side: 'الجانب الأمامي',
+    kyc_camera_back_side: 'الجانب الخلفي',
+    kyc_camera_align_passport: 'اضبط صفحة جواز سفرك',
+    kyc_camera_align_id: 'اضبط هويتك داخل الإطار',
+    kyc_camera_hint_subtitle: 'تأكد من أن التفاصيل مقروءة وتجنب الوهج.',
+    kyc_camera_toggle_torch: 'تبديل الفلاش',
+    
+    // Wallet Setup Flow
+    wallet_setup_title: 'إعداد المحفظة',
+    wallet_setup_set_up_wallet: 'إعداد محفظتك',
+    wallet_setup_description: 'أنشئ محفظة جديدة غير حراسة أو استورد محفظة موجودة. لديك السيطرة الكاملة على مفاتيحك الخاصة.',
+    wallet_setup_create_new: 'إنشاء محفظة جديدة',
+    wallet_setup_import_existing: 'استيراد محفظة موجودة',
+    wallet_setup_creating: 'جاري إنشاء المحفظة...',
+    wallet_setup_error: 'خطأ',
+    wallet_setup_failed_create: 'فشل في إنشاء المحفظة',
+    wallet_setup_backup_title: 'نسخ احتياطي لمحفظتك',
+    wallet_setup_backup_description: 'اكتب هذه الكلمات الـ12 بالترتيب المعروض بالضبط. هذه هي عبارة الاسترداد - احتفظ بها آمنة ولا تشاركها أبداً.',
+    wallet_setup_generating: 'جاري الإنشاء...',
+    wallet_setup_copy: 'نسخ',
+    wallet_setup_share: 'مشاركة',
+    wallet_setup_warning_text: 'لا تشارك عبارة الاسترداد أبداً. أي شخص لديه هذه الكلمات يمكنه الوصول إلى محفظتك.',
+    wallet_setup_backed_up: 'لقد قمت بعمل نسخة احتياطية',
+    wallet_setup_confirm_title: 'تأكيد عبارة الاسترداد',
+    wallet_setup_confirm_description: 'يرجى إدخال عبارة الاسترداد المكونة من 12 كلمة لتأكيد أنك قمت بعمل نسخة احتياطية بشكل صحيح.',
+    wallet_setup_confirm_placeholder: 'أدخل عبارة الاسترداد المكونة من 12 كلمة...',
+    wallet_setup_confirm_create: 'تأكيد وإنشاء المحفظة',
+    wallet_setup_import_title: 'استيراد محفظتك',
+    wallet_setup_import_description: 'اختر كيف تريد استيراد محفظتك الموجودة.',
+    wallet_setup_recovery_phrase: 'عبارة الاسترداد (12 كلمة)',
+    wallet_setup_recovery_placeholder: 'أدخل عبارة الاسترداد المكونة من 12 كلمة...',
+    wallet_setup_import_from_phrase: 'استيراد من عبارة الاسترداد',
+    wallet_setup_importing: 'جاري الاستيراد...',
+    wallet_setup_invalid_mnemonic: 'عبارة تذكيرية غير صحيحة',
+    wallet_setup_invalid_mnemonic_message: 'يرجى إدخال عبارة تذكيرية صحيحة مكونة من 12 كلمة',
+    wallet_setup_import_success: 'تم استيراد المحفظة بنجاح',
+    wallet_setup_import_failed: 'فشل في استيراد المحفظة',
+    wallet_setup_complete_title: 'تم إنشاء المحفظة بنجاح!',
+    wallet_setup_complete_description: 'محفظتك غير المحروسة جاهزة. لديك السيطرة الكاملة على مفاتيحك الخاصة وأموالك.',
+    wallet_setup_go_dashboard: 'الذهاب إلى لوحة التحكم',
+    wallet_setup_mnemonic_copied: 'تم نسخ عبارة التذكير إلى الحافظة',
+    wallet_setup_share_title: 'نسخ احتياطي للمحفظة',
+    wallet_setup_share_message: 'عبارة التذكير لمحفظتي (احتفظ بها آمنة): ',
+    wallet_setup_mnemonic_mismatch: 'عبارات التذكير غير متطابقة. يرجى المحاولة مرة أخرى.',
+    
+    // Wallet Selection & Management
+    wallet_select_title: 'اختيار المحفظة',
+    wallet_select_add: 'إضافة محفظة',
+    wallet_select_manage: 'إدارة',
+    wallet_manage_title: 'إدارة المحفظة',
+    wallet_manage_disconnect: 'قطع اتصال المحفظة',
+    wallet_manage_disconnect_confirm: 'هل أنت متأكد من أنك تريد قطع اتصال هذه المحفظة؟',
+    wallet_manage_cancel: 'إلغاء',
+    wallet_manage_disconnect_action: 'قطع الاتصال',
+    
+    // Authentication
+    sign_out: 'تسجيل الخروج',
+    sign_in: 'تسجيل الدخول',
+    sign_up: 'إنشاء حساب',
+    create_account: 'إنشاء حساب',
+    exit_app: 'إغلاق التطبيق',
+    exit_app_confirm: 'هل أنت متأكد من أنك تريد الخروج؟',
+    
+    // Form Fields
+    email_required: 'البريد الإلكتروني مطلوب',
+    email_invalid: 'يرجى إدخال بريد إلكتروني صحيح',
+    password_required: 'كلمة المرور مطلوبة',
+    password_min_length: 'يجب أن تكون كلمة المرور 6 أحرف على الأقل',
+    full_name_required: 'الاسم الكامل مطلوب',
+    confirm_password_required: 'يرجى تأكيد كلمة المرور',
+    passwords_no_match: 'كلمات المرور غير متطابقة',
+    terms_required: 'يجب قبول الشروط والأحكام',
+    
+    // Form Placeholders
+    input_email_placeholder: 'أدخل بريدك الإلكتروني',
+    enter_password_placeholder: 'أدخل كلمة المرور',
+    enter_full_name_placeholder: 'أدخل اسمك الكامل',
+    enter_email_placeholder: 'أدخل بريدك الإلكتروني',
+    create_password_placeholder: 'إنشاء كلمة مرور',
+    confirm_password_placeholder: 'تأكيد كلمة المرور',
+    
+    // Auth Errors
+    sign_in_failed: 'فشل تسجيل الدخول',
+    failed_send_otp: 'فشل في إرسال رمز التحقق',
+    try_again_later: 'يرجى المحاولة مرة أخرى لاحقاً.',
+    invalid_code: 'رمز غير صحيح',
+    invalid_code_message: 'يرجى إدخال رمز صحيح مكون من 6 أرقام',
+    verification_failed: 'فشل التحقق',
+    max_attempts_exceeded: 'تم تجاوز الحد الأقصى للمحاولات',
+    code_sent: 'تم إرسال الرمز',
+    code_sent_message: 'تم إرسال رمز تحقق جديد إلى',
+    failed_resend: 'فشل في إعادة الإرسال',
+    
+    // Sign In/Up Footer
+    no_account: 'ليس لديك حساب؟',
+    create_one: 'إنشاء واحد',
+    have_account: 'لديك حساب بالفعل؟',
+    sign_in_here: 'تسجيل الدخول',
+    
+    // Terms and Privacy
+    i_agree_to: 'أوافق على',
+    terms_of_service: 'شروط الخدمة',
+    and: 'و',
+    privacy_policy: 'سياسة الخصوصية',
+    
+    // Home Screen
+    account_verification: 'التحقق من الحساب',
+    kyc_verified: 'تم التحقق من الهوية',
+    kyc_under_review: 'التحقق من الهوية قيد المراجعة',
+    kyc_rejected: 'تم رفض التحقق من الهوية',
+    kyc_pending: 'التحقق من الهوية في الانتظار',
+    account_verification_required: 'التحقق من الحساب مطلوب',
+    kyc_verification_message: 'يرجى إكمال التحقق من الهوية للوصول إلى جميع ميزات محفظة ناني.',
+    kyc_banner_pending: 'التحقق من هويتك قيد المراجعة. قد تكون بعض الميزات محدودة.',
+    kyc_banner_not_started: 'أكمل التحقق من هويتك لفتح جميع ميزات المحفظة.',
+    kyc_description_pending: 'نحن نراجع مستنداتك. يستغرق هذا عادة من 1-3 أيام عمل.',
+    kyc_description_rejected: 'تم رفض التحقق من هويتك. يرجى المحاولة مرة أخرى بمستندات صحيحة.',
+    kyc_description_not_started: 'أكمل التحقق من هويتك للوصول إلى جميع ميزات المحفظة.',
+    start_verification: 'بدء التحقق',
+    start: 'بدء',
+    retry: 'إعادة المحاولة',
+    nani_wallet_title: 'محفظة ناني',
+    nani_wallet_description: 'شريكك الموثوق لإدارة الأموال الحلال وحلول الخدمات المصرفية الإسلامية.',
+    zakat_calculator: 'حاسبة الزكاة',
+    investments: 'الاستثمارات',
+    
+    // Preferences
+    primary_color: 'اللون الأساسي',
+    
+    // Wallet Dashboard
+    all_network: 'جميع الشبكات',
+    disconnect_wallet: 'قطع اتصال المحفظة',
+    disconnect_wallet_confirm: 'هل أنت متأكد من أنك تريد قطع اتصال محفظتك؟',
+    cancel: 'إلغاء',
+    disconnect: 'قطع الاتصال',
+    error: 'خطأ',
+    failed_disconnect_wallet: 'فشل في قطع اتصال المحفظة',
+    no_address: 'لا يوجد عنوان',
+    wallet: 'محفظة',
+    address_copied: 'تم نسخ العنوان إلى الحافظة',
+    coming_soon: 'قريباً',
   },
   sw: {
     welcome_back: 'Karibu tena,',
@@ -154,6 +653,10 @@ export const messages: Bundle = {
     quick_actions: 'Vitendo vya Haraka',
     account_information: 'Taarifa za Akaunti',
     email: 'Barua pepe',
+    password: 'Nenosiri',
+    full_name: 'Jina Kamili',
+    email_address: 'Anwani ya Barua Pepe',
+    confirm_password: 'Thibitisha Nenosiri',
     phone: 'Simu',
     email_verified: 'Barua pepe imethibitishwa',
     yes: 'Ndiyo',
@@ -192,15 +695,265 @@ export const messages: Bundle = {
     no_payment_methods: 'Hajajumuishwa njia za malipo bado',
     add_payment_method: 'Ongeza Njia ya Malipo',
     add_new_payment_method: 'Ongeza Njia Mpya ya Malipo',
+    payment_methods_placeholder: 'Ongeza au dhibiti njia zako za malipo.',
     processing: 'Inachakata',
     wallet_address: 'Anwani ya Pochi',
     top_up: 'Jaza',
+    
+    // KYC Camera Screen
+    kyc_camera_permission_needed: 'Idhini inahitajika',
+    kyc_camera_permission_message: 'Ufikiaji wa kamera unahitajika kupiga picha za hati zako.',
+    kyc_camera_error: 'Kosa',
+    kyc_camera_not_ready: 'Kamera haijaandaliwa. Tafadhali subiri kidogo na ujaribu tena.',
+    kyc_camera_error_title: 'Kosa la Kamera',
+    kyc_camera_failed_photo: 'Imeshindwa kupiga picha. ',
+    kyc_camera_capture_failed: 'Kupiga picha kwa kamera kumeshindwa. Tafadhali jaribu tena.',
+    kyc_camera_crop_failed: 'Kukata picha kumeshindwa. Tafadhali jaribu tena.',
+    kyc_camera_check_permissions: 'Tafadhali jaribu tena au angalia ruhusa za kamera.',
+    kyc_camera_try_again: 'Jaribu Tena',
+    kyc_camera_go_back: 'Rudi Nyuma',
+    kyc_camera_ok: 'Sawa',
+    kyc_camera_no_device: 'Kifaa cha kamera hakijapatikana.',
+    kyc_camera_permission_required: 'Ruhusa ya kamera inahitajika.',
+    kyc_camera_grant_permission: 'Toa Ruhusa',
+    kyc_camera_passport: 'Paspoti',
+    kyc_camera_driver_license: 'Leseni ya Udereva',
+    kyc_camera_id_card: 'Kitambulisho',
+    kyc_camera_front_side: 'Upande wa Mbele',
+    kyc_camera_back_side: 'Upande wa Nyuma',
+    kyc_camera_align_passport: 'Panga ukurasa wa paspoti yako',
+    kyc_camera_align_id: 'Panga kitambulisho chako ndani ya fremu',
+    kyc_camera_hint_subtitle: 'Hakikisha maelezo yanasomeka na epuka mwanga mkali.',
+    kyc_camera_toggle_torch: 'Washa/zima tochi',
+    
+    // Wallet Setup Flow
+    wallet_setup_title: 'Usanidi wa Pochi',
+    wallet_setup_set_up_wallet: 'Sanidi Pochi Yako',
+    wallet_setup_description: 'Unda pochi mpya isiyo ya ulinzi au ingiza pochi iliyopo. Una udhibiti kamili wa funguo zako za kibinafsi.',
+    wallet_setup_create_new: 'Unda Pochi Mpya',
+    wallet_setup_import_existing: 'Ingiza Pochi Iliyopo',
+    wallet_setup_creating: 'Inaunda pochi...',
+    wallet_setup_error: 'Kosa',
+    wallet_setup_failed_create: 'Imeshindwa kuunda pochi',
+    wallet_setup_backup_title: 'Hifadhi Pochi Yako',
+    wallet_setup_backup_description: 'Andika maneno haya 12 kwa mpangilio hasa ulioorodheshwa. Hii ni sentensi yako ya kurejesha - iweke salama na usishiriki na mtu yeyote.',
+    wallet_setup_generating: 'Inazalisha...',
+    wallet_setup_copy: 'Nakili',
+    wallet_setup_share: 'Shiriki',
+    wallet_setup_warning_text: 'Usishiriki sentensi yako ya kurejesha kamwe. Mtu yeyote aliye na maneno haya anaweza kufikia pochi yako.',
+    wallet_setup_backed_up: 'Nimehifadhi',
+    wallet_setup_confirm_title: 'Thibitisha Sentensi Yako ya Kurejesha',
+    wallet_setup_confirm_description: 'Tafadhali ingiza sentensi yako ya kurejesha ya maneno 12 ili kuthibitisha umehifadhi kwa usahihi.',
+    wallet_setup_confirm_placeholder: 'Ingiza sentensi ya kurejesha ya maneno 12...',
+    wallet_setup_confirm_create: 'Thibitisha na Unda Pochi',
+    wallet_setup_import_title: 'Ingiza Pochi Yako',
+    wallet_setup_import_description: 'Chagua jinsi unavyotaka kuingiza pochi yako iliyopo.',
+    wallet_setup_recovery_phrase: 'Sentensi ya Kurejesha (maneno 12)',
+    wallet_setup_recovery_placeholder: 'Ingiza sentensi ya kurejesha ya maneno 12...',
+    wallet_setup_import_from_phrase: 'Ingiza kutoka Sentensi ya Kurejesha',
+    wallet_setup_importing: 'Inaingiza...',
+    wallet_setup_invalid_mnemonic: 'Sentensi ya Kukumbusha Batili',
+    wallet_setup_invalid_mnemonic_message: 'Tafadhali ingiza sentensi ya kukumbusha halali ya maneno 12',
+    wallet_setup_import_success: 'Pochi imeingizwa kwa mafanikio',
+    wallet_setup_import_failed: 'Kuingiza pochi kumeshindwa',
+    wallet_setup_complete_title: 'Pochi Imeundwa kwa Mafanikio!',
+    wallet_setup_complete_description: 'Pochi yako isiyo ya ulinzi iko tayari. Una udhibiti kamili wa funguo zako za kibinafsi na fedha zako.',
+    wallet_setup_go_dashboard: 'Nenda kwenye Dashibodi',
+    wallet_setup_mnemonic_copied: 'Sentensi ya kukumbusha imenakiliwa kwenye ubao wa kunakili',
+    wallet_setup_share_title: 'Hifadhi ya Pochi',
+    wallet_setup_share_message: 'Sentensi yangu ya kukumbusha pochi (iweke salama): ',
+    wallet_setup_mnemonic_mismatch: 'Sentensi za kukumbusha hazilingani. Tafadhali jaribu tena.',
+    
+    // Wallet Selection & Management
+    wallet_select_title: 'Chagua Pochi',
+    wallet_select_add: 'Ongeza Pochi',
+    wallet_select_manage: 'Dhibiti',
+    wallet_manage_title: 'Dhibiti Pochi',
+    wallet_manage_disconnect: 'Tenganisha Pochi',
+    wallet_manage_disconnect_confirm: 'Je, una uhakika unataka kutenganisha pochi hii?',
+    wallet_manage_cancel: 'Ghairi',
+    wallet_manage_disconnect_action: 'Tenganisha',
+    
+    // Authentication
+    sign_out: 'Toka',
+    sign_in: 'Ingia',
+    sign_up: 'Jisajili',
+    create_account: 'Unda Akaunti',
+    exit_app: 'Toka kwenye Programu',
+    exit_app_confirm: 'Je, una uhakika unataka kutoka?',
+    
+    // Form Fields
+    email_required: 'Barua pepe inahitajika',
+    email_invalid: 'Tafadhali ingiza barua pepe halali',
+    password_required: 'Nenosiri linahitajika',
+    password_min_length: 'Nenosiri lazima liwe na angalau herufi 6',
+    full_name_required: 'Jina kamili linahitajika',
+    confirm_password_required: 'Tafadhali thibitisha nenosiri',
+    passwords_no_match: 'Nenosiri hazilingani',
+    terms_required: 'Lazima ukubali masharti na hali',
+    
+    // Form Placeholders
+    input_email_placeholder: 'Ingiza Barua Pepe Yako',
+    enter_password_placeholder: 'Ingiza nenosiri lako',
+    enter_full_name_placeholder: 'Ingiza jina lako kamili',
+    enter_email_placeholder: 'Ingiza barua pepe yako',
+    create_password_placeholder: 'Unda nenosiri',
+    confirm_password_placeholder: 'Thibitisha nenosiri',
+    
+    // Auth Errors
+    sign_in_failed: 'Kuingia Kumeshindwa',
+    failed_send_otp: 'Imeshindwa Kutuma OTP',
+    try_again_later: 'Tafadhali jaribu tena baadaye.',
+    invalid_code: 'Msimbo Batili',
+    invalid_code_message: 'Tafadhali ingiza msimbo halali wa nambari 6',
+    verification_failed: 'Uthibitisho Umeshindwa',
+    max_attempts_exceeded: 'Kiwango cha juu cha majaribio kimezidishwa',
+    code_sent: 'Msimbo Umetumwa',
+    code_sent_message: 'Msimbo mpya wa uthibitisho umetumwa kwa',
+    failed_resend: 'Imeshindwa Kutuma Tena',
+    
+    // Sign In/Up Footer
+    no_account: 'Hauna akaunti?',
+    create_one: 'Unda Moja',
+    have_account: 'Tayari una akaunti?',
+    sign_in_here: 'Ingia',
+    
+    // Terms and Privacy
+    i_agree_to: 'Nakubali',
+    terms_of_service: 'Masharti ya Huduma',
+    and: 'na',
+    privacy_policy: 'Sera ya Faragha',
+    
+    // Home Screen
+    account_verification: 'Uthibitisho wa Akaunti',
+    kyc_verified: 'KYC Imethibitishwa',
+    kyc_under_review: 'KYC Inakaguliwa',
+    kyc_rejected: 'KYC Imekataliwa',
+    kyc_pending: 'KYC Inasubiri',
+    account_verification_required: 'Uthibitisho wa Akaunti Unahitajika',
+    kyc_verification_message: 'Tafadhali kamilisha uthibitisho wa KYC ili kufikia vipengele vyote vya Nani Wallet.',
+    kyc_banner_pending: 'Uthibitisho wako wa KYC unakaguliwa. Baadhi ya vipengele vinaweza kuwa na vikwazo.',
+    kyc_banner_not_started: 'Kamilisha uthibitisho wa KYC ili kufungua vipengele vyote vya pochi.',
+    kyc_description_pending: 'Tunakagua hati zako. Hii kwa kawaida inachukua siku 1-3 za kazi.',
+    kyc_description_rejected: 'Uthibitisho wako umekataliwa. Tafadhali jaribu tena na hati sahihi.',
+    kyc_description_not_started: 'Kamilisha uthibitisho wako ili kufikia vipengele vyote vya pochi.',
+    start_verification: 'Anza Uthibitisho',
+    start: 'Anza',
+    retry: 'Jaribu Tena',
+    nani_wallet_title: 'Nani Wallet',
+    nani_wallet_description: 'Mshirika wako wa kuaminika kwa usimamizi wa fedha Halali na suluhisho za benki za Kiislamu.',
+    zakat_calculator: 'Kikokotoo cha Zakat',
+    investments: 'Uwekezaji',
+    
+    // Preferences
+    primary_color: 'Rangi Kuu',
+    
+    // Wallet Dashboard
+    all_network: 'Mitandao Yote',
+    disconnect_wallet: 'Tenganisha Pochi',
+    disconnect_wallet_confirm: 'Je, una uhakika unataka kutenganisha pochi yako?',
+    cancel: 'Ghairi',
+    disconnect: 'Tenganisha',
+    error: 'Kosa',
+    failed_disconnect_wallet: 'Imeshindwa kutenganisha pochi',
+    no_address: 'Hakuna Anwani',
+    wallet: 'Pochi',
+    address_copied: 'Anwani imenakiliwa kwenye ubao wa kunakili',
+    coming_soon: 'Inakuja hivi karibuni',
   },
 };
 
 export const t = (key: string, locale: LocaleCode): string => {
-  const bundle = messages[locale] || messages.en;
-  return bundle[key] ?? key;
+  try {
+    const bundle = messages[locale] || messages.en;
+    const translation = bundle[key];
+    
+    if (translation) {
+      return translation;
+    }
+    
+    // Fallback to English if translation missing in selected language
+    if (locale !== 'en' && messages.en[key]) {
+      console.warn(`Translation missing for key "${key}" in locale "${locale}", falling back to English`);
+      return messages.en[key];
+    }
+    
+    // If key doesn't exist in any language, return the key itself
+    console.warn(`Translation key "${key}" not found in any locale`);
+    return key;
+  } catch (error) {
+    console.error(`Error getting translation for key "${key}" in locale "${locale}":`, error);
+    return key;
+  }
 };
 
+// RTL (Right-to-Left) language support
+export const isRTL = (locale: LocaleCode): boolean => {
+  return locale === 'ar';
+};
 
+// Get text direction for a locale
+export const getTextDirection = (locale: LocaleCode): 'ltr' | 'rtl' => {
+  return isRTL(locale) ? 'rtl' : 'ltr';
+};
+
+// Get text alignment based on locale
+export const getTextAlign = (locale: LocaleCode, defaultAlign: 'left' | 'center' | 'right' = 'left'): 'left' | 'center' | 'right' => {
+  if (defaultAlign === 'center') return 'center';
+  if (isRTL(locale)) {
+    return defaultAlign === 'left' ? 'right' : 'left';
+  }
+  return defaultAlign;
+};
+
+// Format numbers according to locale
+export const formatNumber = (num: number, locale: LocaleCode): string => {
+  try {
+    const localeMap: Record<LocaleCode, string> = {
+      'en': 'en-US',
+      'so': 'so-SO',
+      'ar': 'ar-SA',
+      'sw': 'sw-KE'
+    };
+    
+    return new Intl.NumberFormat(localeMap[locale] || 'en-US').format(num);
+  } catch (error) {
+    // Fallback to basic formatting if Intl is not available
+    return num.toLocaleString();
+  }
+};
+
+// Format currency according to locale
+export const formatCurrency = (amount: number, currency: string = 'USD', locale: LocaleCode): string => {
+  try {
+    const localeMap: Record<LocaleCode, string> = {
+      'en': 'en-US',
+      'so': 'so-SO',
+      'ar': 'ar-SA',
+      'sw': 'sw-KE'
+    };
+    
+    return new Intl.NumberFormat(localeMap[locale] || 'en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  } catch (error) {
+    // Fallback formatting
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+};
+
+// Custom hook for easier i18n usage
+export const useTranslation = () => {
+  const { locale } = useLocale();
+  
+  return {
+    t: (key: string) => t(key, locale),
+    locale,
+    isRTL: isRTL(locale),
+    textDirection: getTextDirection(locale),
+    getTextAlign: (defaultAlign: 'left' | 'center' | 'right' = 'left') => getTextAlign(locale, defaultAlign),
+    formatNumber: (num: number) => formatNumber(num, locale),
+    formatCurrency: (amount: number, currency?: string) => formatCurrency(amount, currency, locale),
+  };
+};

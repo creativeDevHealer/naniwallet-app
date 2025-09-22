@@ -3,12 +3,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
+import { useLocale } from '../../context/LocaleContext';
+import { t } from '../../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface Props { navigation: any }
 
 export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
   const { theme } = useTheme();
+  const { locale } = useLocale();
   const { wallet, wallets, setActiveWallet } = useWeb3Auth();
 
   const styles = StyleSheet.create({
@@ -38,16 +41,16 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Select Wallet</Text>
+        <Text style={styles.title}>{t('wallet_select_title', locale)}</Text>
         <View style={styles.placeholderRight} />
       </View>
 
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('WalletSetup', { fromMain: true })}>
-          <Text style={styles.addBtnText}>Add Wallet</Text>
+          <Text style={styles.addBtnText}>{t('wallet_select_add', locale)}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.manageBtn} onPress={() => navigation.navigate('ManageWallet')}>
-          <Text style={styles.manageBtnText}>Manage</Text>
+          <Text style={styles.manageBtnText}>{t('wallet_select_manage', locale)}</Text>
         </TouchableOpacity>
       </View>
 

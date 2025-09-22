@@ -12,6 +12,13 @@ import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { EmailOTPVerificationScreen } from '../screens/auth/EmailOTPVerificationScreen';
 import { PhoneOTPVerificationScreen } from '../screens/auth/PhoneOTPVerificationScreen';
 
+// KYC Screens
+import { KYCWelcomeScreen } from '../screens/kyc/KYCWelcomeScreen';
+import { KYCPersonalInfoScreen } from '../screens/kyc/KYCPersonalInfoScreen';
+import { KYCDocumentUploadScreen } from '../screens/kyc/KYCDocumentUploadScreen';
+import { KYCReviewScreen } from '../screens/kyc/KYCReviewScreen';
+import { KYCCameraScreen } from '../screens/kyc/KYCCameraScreen';
+
 // Main Screens
 import { HomeScreen } from '../screens/main/HomeScreen';
 import { SettingsScreen } from '../screens/main/SettingsScreen';
@@ -64,11 +71,20 @@ const LoadingScreen: React.FC = () => {
 
 const AuthStack: React.FC = () => {
   const { theme } = useTheme();
-  const { user, needsWalletSetup } = useAuth();
+  const { user, needsWalletSetup, kycStatus } = useAuth();
 
-  const initialRoute = user && needsWalletSetup ? "WalletSetup" : "SignIn";
+  // Determine initial route based on user state and KYC status
+  let initialRoute = "SignIn";
   
-  console.log('🔧 AuthStack - initialRoute:', initialRoute, 'user:', user ? 'logged in' : 'not logged in', 'needsWalletSetup:', needsWalletSetup);
+  if (user && needsWalletSetup) {
+    if (kycStatus === 'notstarted' || kycStatus === 'rejected') {
+      initialRoute = "KYCWelcome";
+    } else {
+      initialRoute = "WalletSetup";
+    }
+  }
+  
+  console.log('🔧 AuthStack - initialRoute:', initialRoute, 'user:', user ? 'logged in' : 'not logged in', 'needsWalletSetup:', needsWalletSetup, 'kycStatus:', kycStatus);
 
   return (
     <Stack.Navigator
@@ -83,6 +99,11 @@ const AuthStack: React.FC = () => {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="EmailOTPVerification" component={EmailOTPVerificationScreen as any} />
       <Stack.Screen name="PhoneOTPVerification" component={PhoneOTPVerificationScreen as any} />
+      <Stack.Screen name="KYCWelcome" component={KYCWelcomeScreen as any} />
+      <Stack.Screen name="KYCPersonalInfo" component={KYCPersonalInfoScreen as any} />
+      <Stack.Screen name="KYCDocumentUpload" component={KYCDocumentUploadScreen as any} />
+      <Stack.Screen name="KYCCamera" component={KYCCameraScreen as any} />
+      <Stack.Screen name="KYCReview" component={KYCReviewScreen as any} />
       <Stack.Screen name="WalletSetup" component={WalletSetupScreen} />
       <Stack.Screen name="WalletSelect" component={WalletSelectScreen} />
       <Stack.Screen name="ManageWallet" component={ManageWalletScreen} />
@@ -131,6 +152,12 @@ const MainStack: React.FC = () => {
       <Stack.Screen name="TopUp" component={TopUpScreen} />
       <Stack.Screen name="SelectReceiveToken" component={SelectReceiveTokenScreen} />
       <Stack.Screen name="ReceiveDialog" component={ReceiveScreen} />
+      {/* KYC Screens - Available from main app for re-verification */}
+      <Stack.Screen name="KYCWelcome" component={KYCWelcomeScreen as any} />
+      <Stack.Screen name="KYCPersonalInfo" component={KYCPersonalInfoScreen as any} />
+      <Stack.Screen name="KYCDocumentUpload" component={KYCDocumentUploadScreen as any} />
+      <Stack.Screen name="KYCCamera" component={KYCCameraScreen as any} />
+      <Stack.Screen name="KYCReview" component={KYCReviewScreen as any} />
     </Stack.Navigator>
   );
 };

@@ -120,7 +120,7 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => setColorSheetOpen(true)}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Icon name="palette" size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
-              <Text style={{ color: theme.colors.text }}>Primary Color</Text>
+              <Text style={{ color: theme.colors.text }}>{t('primary_color', locale)}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: currentPrimaryColor, marginRight: 8, borderWidth: 1, borderColor: theme.colors.border }} />
@@ -193,7 +193,7 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
           <View style={{ alignItems: 'center', paddingTop: 8 }}>
             <View style={{ width: 44, height: 3, backgroundColor: theme.colors.border, borderRadius: 2 }} />
           </View>
-          <Text style={{ textAlign: 'center', paddingVertical: 12, color: theme.colors.text, fontWeight: '600' }}>Primary Color</Text>
+          <Text style={{ textAlign: 'center', paddingVertical: 12, color: theme.colors.text, fontWeight: '600' }}>{t('primary_color', locale)}</Text>
           
           {/* Color Grid */}
           <View style={{ paddingHorizontal: 16, paddingBottom: 20 }}>

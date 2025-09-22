@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import BackendOTPService from '../services/backendOTPService';
+import KYCService from '../services/kycService';
 import { navigate } from '../navigation/navigationRef';
 
 interface User {
@@ -11,7 +12,6 @@ interface User {
   phoneNumber?: string;
   photoURL?: string;
   emailVerified: boolean;
-  kycStatus: 'pending' | 'approved' | 'rejected';
   walletAddress?: string;
 }
 
@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   needsWalletSetup: boolean;
+  kycStatus: 'notstarted' | 'pending' | 'approved' | 'rejected' | null;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -31,6 +32,8 @@ interface AuthContextType {
   verifyPhoneOTP: (phoneNumber: string, otp: string) => Promise<void>;
   verifyPhoneOTPAndCreateAccount: (email: string, password: string, fullName: string, phoneNumber: string, otp: string) => Promise<void>;
   completeWalletSetup: () => void;
+  completeKYCAndLogin: () => Promise<void>;
+  checkKYCStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +46,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsWalletSetup, setNeedsWalletSetup] = useState(false);
+  const [kycStatus, setKycStatus] = useState<'notstarted' | 'pending' | 'approved' | 'rejected' | null>(null);
 
   useEffect(() => {
     // Check for existing authentication token on app start
@@ -59,18 +63,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Verify token is still valid with backend
         const isValid = await verifyTokenWithBackend(token);
         if (isValid) {
-          setUser(JSON.parse(userData));
+          const user = JSON.parse(userData);
+          setUser(user);
           
-          // Check if user has a wallet
-          // Support multi-wallets: check 'wallets'
-          const walletsJson = await AsyncStorage.getItem('wallets');
-          if (!walletsJson) {
-            console.log('🔍 No wallet found for existing user, setting needsWalletSetup to true');
-            setNeedsWalletSetup(true);
+          // Check KYC status to determine navigation
+          const kycService = KYCService.getInstance();
+          const kycResult = await kycService.getKYCStatus();
+          
+          if (kycResult.success) {
+            setKycStatus(kycResult.kycStatus);
+            console.log('🔍 Startup KYC Status:', kycResult.kycStatus);
+            
+            if (kycResult.kycStatus === 'notstarted' || kycResult.kycStatus === 'rejected') {
+              // User needs to complete KYC
+              console.log('🔍 KYC required, user will be directed to KYC onboarding');
+              setNeedsWalletSetup(true);
+            } else if (kycResult.kycStatus === 'pending' || kycResult.kycStatus === 'approved') {
+              // KYC is submitted or approved, go to home screen
+              console.log('🔍 KYC completed, user can access home screen');
+              setNeedsWalletSetup(false);
+            }
           } else {
-            console.log('🔍 Wallet found for existing user, checking wallet setup completion');
-            // Check if wallet setup is completed (for existing users who might have skipped)
-            setNeedsWalletSetup(walletSetupCompleted !== 'true');
+            // Failed to get KYC status, default to requiring KYC
+            console.log('❌ Failed to get KYC status on startup, defaulting to KYC required');
+            setKycStatus('notstarted');
+            setNeedsWalletSetup(true);
           }
         } else {
           // Token expired, clear storage
@@ -114,7 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const clearAuthData = async () => {
     // Clear all authentication and wallet data when user signs out
-    await AsyncStorage.multiRemove(['authToken', 'userData', 'walletSetupCompleted', 'walletInfo', 'tempSignupData', 'emailVerifiedData']);
+    await AsyncStorage.multiRemove(['authToken', 'userData', 'walletSetupCompleted', 'walletInfo', 'tempSignupData', 'emailVerifiedData', 'kycData', 'pendingAccountData']);
     setUser(null);
     setNeedsWalletSetup(false);
   };
@@ -208,14 +225,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(result.user);
       console.log('✅ Sign in successful for user:', result.user);
       
-      // Check if user has a wallet
-      const walletsJson = await AsyncStorage.getItem('wallets');
-      if (!walletsJson) {
-        console.log('🔍 No wallet found for user, setting needsWalletSetup to true');
-        setNeedsWalletSetup(true);
+      // Check KYC status first to determine navigation
+      const kycService = KYCService.getInstance();
+      const kycResult = await kycService.getKYCStatus();
+      
+      if (kycResult.success) {
+        setKycStatus(kycResult.kycStatus);
+        console.log('🔍 KYC Status:', kycResult.kycStatus);
+        
+        if (kycResult.kycStatus === 'notstarted') {
+          // User needs to complete KYC, skip wallet setup and go to KYC
+          console.log('🔍 KYC not started, user will be directed to KYC onboarding');
+          setNeedsWalletSetup(true); // This will show AuthStack with KYC flow
+          return;
+        } else if (kycResult.kycStatus === 'pending' || kycResult.kycStatus === 'approved') {
+          // KYC is submitted or approved, go to home screen
+          console.log('🔍 KYC pending or approved, user can access home screen');
+          setNeedsWalletSetup(false);
+          return;
+        } else if (kycResult.kycStatus === 'rejected') {
+          // KYC rejected, user needs to restart KYC
+          console.log('🔍 KYC rejected, user needs to restart KYC');
+          setNeedsWalletSetup(true);
+          return;
+        }
       } else {
-        console.log('🔍 Wallet found for user, wallet setup not needed');
-        setNeedsWalletSetup(false);
+        // Failed to get KYC status, default to requiring KYC
+        console.log('❌ Failed to get KYC status, defaulting to KYC required');
+        setKycStatus('notstarted');
+        setNeedsWalletSetup(true);
       }
     } catch (error: any) {
       console.log('❌ Sign in error:', error);
@@ -483,16 +521,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       const { email: verifiedEmail, password: verifiedPassword, fullName: verifiedFullName } = JSON.parse(emailVerifiedData);
       
-      // Create user account with phone number
-      await createUserAccount(verifiedEmail, verifiedPassword, verifiedFullName, phoneNumber);
+      // Create user account with phone number but don't auto-login
+      const registrationResult = await createUserAccountWithoutLogin(verifiedEmail, verifiedPassword, verifiedFullName, phoneNumber);
+      
+      // Store account data and credentials for post-KYC login
+      await AsyncStorage.setItem('pendingAccountData', JSON.stringify({
+        email: verifiedEmail,
+        fullName: verifiedFullName,
+        phoneNumber: phoneNumber,
+        token: registrationResult.token,
+        user: registrationResult.user
+      }));
       
       // Clean up all temporary data
       await AsyncStorage.removeItem('tempSignupData');
       await AsyncStorage.removeItem('emailVerifiedData');
       
-      console.log('✅ Account created successfully with phone verification');
+      console.log('✅ Account created successfully with phone verification - ready for KYC');
     } catch (error: any) {
       console.log('❌ Phone OTP verification and account creation error:', error);
+      throw new Error(error.message);
+    }
+  };
+
+  const createUserAccountWithoutLogin = async (email: string, password: string, fullName: string, phoneNumber?: string) => {
+    try {
+      console.log('🌐 Calling registration API for:', email, '(without auto-login)');
+      
+      const backendOTPService = BackendOTPService.getInstance();
+      const url = `${backendOTPService.getConfig().baseUrl}/auth/register`;
+      console.log('📡 Registration URL:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName,
+          phoneNumber
+        })
+      });
+
+      console.log('📊 Registration response status:', response.status);
+      
+      const result = await response.json();
+      console.log('📋 Registration response:', result);
+
+      if (!result.success) {
+        console.log('❌ Registration failed:', result.error);
+        throw new Error(result.error || 'Registration failed');
+      }
+
+      console.log('✅ Registration successful - account created without login');
+      
+      return {
+        token: result.token,
+        user: result.user
+      };
+    } catch (error: any) {
+      console.log('❌ Registration error:', error.message);
       throw new Error(error.message);
     }
   };
@@ -567,10 +657,70 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, 100);
   };
 
+  const checkKYCStatus = async () => {
+    try {
+      if (!user) {
+        setKycStatus(null);
+        return;
+      }
+
+      console.log('🔍 Checking KYC status for user:', user.email);
+      const kycService = KYCService.getInstance();
+      const result = await kycService.getKYCStatus();
+      
+      if (result.success) {
+        console.log('✅ KYC Status:', result.kycStatus);
+        setKycStatus(result.kycStatus);
+      } else {
+        console.log('❌ Failed to get KYC status, defaulting to notstarted');
+        setKycStatus('notstarted');
+      }
+    } catch (error) {
+      console.error('Error checking KYC status:', error);
+      setKycStatus('notstarted');
+    }
+  };
+
+  const completeKYCAndLogin = async () => {
+    try {
+      console.log('🔐 Completing KYC and going directly to home...');
+      
+      // Get pending account data
+      const pendingAccountData = await AsyncStorage.getItem('pendingAccountData');
+      if (!pendingAccountData) {
+        throw new Error('No pending account data found');
+      }
+      
+      const accountData = JSON.parse(pendingAccountData);
+      console.log('📋 Found pending account data:', accountData);
+      
+      // Log in the user with stored token and user data
+      await AsyncStorage.setItem('authToken', accountData.token);
+      await AsyncStorage.setItem('userData', JSON.stringify(accountData.user));
+      
+      // Set user state but skip wallet setup since we're going directly to home
+      setUser(accountData.user);
+      setNeedsWalletSetup(false); // Skip wallet setup, go directly to home
+      await AsyncStorage.setItem('walletSetupCompleted', 'true');
+      
+      // Update KYC status to pending (since KYC was just submitted)
+      setKycStatus('pending');
+      
+      // Clean up pending data
+      await AsyncStorage.removeItem('pendingAccountData');
+      
+      console.log('✅ User logged in successfully after KYC completion, going to home');
+    } catch (error: any) {
+      console.error('❌ Error completing KYC and login:', error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
     needsWalletSetup,
+    kycStatus,
     signUp,
     signIn,
     signOut,
@@ -583,6 +733,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     verifyPhoneOTP,
     verifyPhoneOTPAndCreateAccount,
     completeWalletSetup,
+    completeKYCAndLogin,
+    checkKYCStatus,
   };
 
   return (
