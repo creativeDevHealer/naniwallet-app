@@ -41,7 +41,7 @@ import { EditWalletScreen } from '../screens/wallet/EditWalletScreen';
 // Transaction Screens
 import { TopUpScreen } from '../screens/transaction/TopUpScreen';
 import { SelectReceiveTokenScreen } from '../screens/transaction/SelectReceiveTokenScreen';
-import { ReceiveScreen } from '../screens/transaction/ReceiveScreen';
+import ReceiveScreen from '../screens/transaction/ReceiveScreen';
 import { SelectSendTokenScreen } from '../screens/transaction/SelectSendTokenScreen';
 import { SendScreen } from '../screens/transaction/SendScreen';
 

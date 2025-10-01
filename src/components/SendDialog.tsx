@@ -49,6 +49,17 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
     }
   }, [visible, token]);
 
+  const getTokenIconUrl = (idOrSymbol?: string | null) => {
+    if (!idOrSymbol) return undefined;
+    const key = String(idOrSymbol).toLowerCase();
+    const map: Record<string, string> = {
+      btc: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+      eth: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+      sol: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+    };
+    return map[key];
+  };
+
   const handleSend = async () => {
     if (!recipientAddress.trim()) {
       Alert.alert('Error', 'Please enter recipient address');
@@ -357,9 +368,9 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                     borderColor: (token.color || theme.colors.primary) + '30'
                   }
                 ]}>
-                  {token.iconUrl && !imageError ? (
+                  {!imageError && (getTokenIconUrl(token.id) || getTokenIconUrl(token.symbol)) ? (
                     <Image
-                      source={{ uri: token.iconUrl }}
+                      source={{ uri: (getTokenIconUrl(token.id) || getTokenIconUrl(token.symbol)) as string }}
                       style={styles.tokenImage}
                       onError={() => setImageError(true)}
                       resizeMode="contain"

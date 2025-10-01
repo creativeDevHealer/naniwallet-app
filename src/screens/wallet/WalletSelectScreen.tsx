@@ -1,6 +1,6 @@
 import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, InteractionManager } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
 import { useLocale } from '../../context/LocaleContext';
@@ -13,6 +13,7 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
   const { theme } = useTheme();
   const { locale } = useLocale();
   const { wallet, wallets, setActiveWallet } = useWeb3Auth();
+  const [busy, setBusy] = React.useState<string | null>(null);
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.colors.background },
@@ -31,6 +32,7 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
     addBtnText: { color: theme.colors.white, fontWeight: '800' },
     manageBtn: { flex: 1, backgroundColor: 'transparent', borderRadius: 24, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: theme.colors.border },
     manageBtnText: { color: theme.colors.text, fontWeight: '800' },
+    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.overlay, alignItems: 'center', justifyContent: 'center' },
   });
 
   const shortAddr = (addr?: string) => !addr ? '' : `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -56,7 +58,21 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
 
       <View style={styles.section}>
         {wallets.map(w => (
-          <TouchableOpacity key={w.id || w.address} style={styles.item} onPress={async () => { await setActiveWallet(w.id || w.address); navigation.goBack(); }}>
+          <TouchableOpacity
+            key={w.id || w.address}
+            style={styles.item}
+            disabled={!!busy}
+            onPress={() => {
+              if (busy) return;
+              const id = w.id || w.address;
+              setBusy(id);
+              // Fire-and-forget to avoid blocking UI; dashboard will react to state change
+              setActiveWallet(id).catch(() => {});
+              navigation.goBack();
+              // Re-enable taps shortly after navigating away
+              setTimeout(() => setBusy(null), 300);
+            }}
+          >
             <Icon name="account-balance-wallet" size={22} color={theme.colors.primary} />
             <View style={styles.itemTextWrap}>
               <Text style={styles.itemTitle}>{w.name || 'Wallet'}</Text>
@@ -68,6 +84,7 @@ export const WalletSelectScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         ))}
       </View>
+      {/* No blocking overlay to keep transitions instant */}
     </SafeAreaView>
   );
 };

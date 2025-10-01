@@ -10,6 +10,7 @@ import {
   Clipboard,
   Image,
 } from 'react-native';
+import { InteractionManager } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useWeb3Auth } from '../context/Web3AuthContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -26,37 +27,64 @@ interface ReceiveDialogProps {
 export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, onClose }) => {
   const { theme } = useTheme();
   const { activeWallet, wallet, wallets } = useWeb3Auth();
+  const [imageError, setImageError] = useState(false);
+  const getTokenIconUrl = (idOrSymbol?: string | null) => {
+    if (!idOrSymbol) return undefined;
+    const key = String(idOrSymbol).toLowerCase();
+    const map: Record<string, string> = {
+      btc: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png',
+      eth: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png',
+      sol: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
+    };
+    return map[key];
+  };
   const [address, setAddress] = useState('');
   const [addressInfo, setAddressInfo] = useState<TokenAddressInfo | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+    let interactionSub: any;
+
     const loadTokenAddress = async () => {
-      if (visible && token) {
-        setLoading(true);
-        const currentWallet = activeWallet || wallet || (wallets && wallets.length > 0 ? wallets[0] : null);
-        
-        if (currentWallet && currentWallet.address) {
-          try {
-            const tokenAddressService = TokenAddressService.getInstance();
-            const info = await tokenAddressService.getTokenAddressInfo(token, currentWallet.address);
-            
-            setAddress(info.address);
-            setAddressInfo(info);
-          } catch (error) {
-            console.error('Error loading token address:', error);
-            setAddress('');
-            setAddressInfo(null);
-          }
-        } else {
+      if (!(visible && token)) return;
+      setLoading(true);
+      const currentWallet = activeWallet || wallet || (wallets && wallets.length > 0 ? wallets[0] : null);
+
+      if (currentWallet && currentWallet.address) {
+        try {
+          const tokenAddressService = TokenAddressService.getInstance();
+          const info = await tokenAddressService.getTokenAddressInfo(token, currentWallet.mnemonic);
+          if (!isMounted) return;
+          setAddress(info?.address);
+          setAddressInfo(info || null);
+        } catch (error) {
+          console.error('Error loading token address:', error);
+          if (!isMounted) return;
           setAddress('');
           setAddressInfo(null);
         }
-        setLoading(false);
+      } else {
+        if (!isMounted) return;
+        setAddress('');
+        setAddressInfo(null);
       }
+      if (isMounted) setLoading(false);
     };
 
-    loadTokenAddress();
+    if (visible) {
+      interactionSub = InteractionManager.runAfterInteractions(() => {
+        // Defer heavy work until after animations/gestures
+        loadTokenAddress();
+      });
+    }
+
+    return () => {
+      isMounted = false;
+      if (interactionSub && typeof interactionSub.cancel === 'function') {
+        interactionSub.cancel();
+      }
+    };
   }, [visible, activeWallet, wallet, wallets, token]);
 
 
@@ -304,11 +332,15 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
 
           <View style={styles.tokenCard}>
             <View style={styles.tokenRow}>
-              {token.iconUrl ? (
-                <Image source={{ uri: token.iconUrl }} style={[styles.tokenIcon, { borderRadius: 14 }]} />
+              {!imageError && (getTokenIconUrl(token?.id) || getTokenIconUrl(token?.symbol)) ? (
+                <Image 
+                  source={{ uri: (getTokenIconUrl(token?.id) || getTokenIconUrl(token?.symbol)) as string }} 
+                  style={[styles.tokenIcon, { borderRadius: 14 }]} 
+                  onError={() => setImageError(true)}
+                />
               ) : (
-                <View style={[styles.tokenIcon, { backgroundColor: token.color + '33' }]}>
-                  <Text style={{ color: token.color, fontWeight: '800' }}>{token.symbol.charAt(0)}</Text>
+                <View style={[styles.tokenIcon, { backgroundColor: (token?.color || '#999') + '33' }]}>
+                  <Text style={{ color: token?.color || '#999', fontWeight: '800' }}>{token?.symbol?.charAt(0)}</Text>
                 </View>
               )}
               <View style={styles.tokenInfo}>
@@ -383,3 +415,5 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
     </Modal>
   );
 };
+
+export default ReceiveDialog;

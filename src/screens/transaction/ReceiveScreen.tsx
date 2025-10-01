@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { ReceiveDialog } from '../../components/ReceiveDialog';
+import ReceiveDialog from '../../components/ReceiveDialog';
 import { NetworkToken } from '../../services/tokenService';
 
 interface ReceiveScreenProps {
@@ -27,3 +27,5 @@ export const ReceiveScreen: React.FC<ReceiveScreenProps> = ({ navigation, route 
     </View>
   );
 };
+
+export default ReceiveScreen;

@@ -22,6 +22,10 @@ import { Clipboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TokenService, { NetworkToken } from '../../services/tokenService';
 import NetworkService, { NetworkChain } from '../../services/networkService';
+import BTCBalanceService from '../../services/btcBalanceService';
+import ETHBalanceService from '../../services/ethBalanceService';
+import SOLBalanceService from '../../services/solBalanceService';
+import TokenAddressService from '../../services/tokenAddressService';
 
 interface WalletDashboardScreenProps {
   navigation: any;
@@ -39,10 +43,18 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
   const [activeTab, setActiveTab] = useState<'tokens' | 'nfts'>('tokens');
   const [selectedTokens, setSelectedTokens] = useState<NetworkToken[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
+  const [hasSelection, setHasSelection] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHasSelection(selectedTokens.length > 0);
+  }, [selectedTokens]);
   const [toastMessage, setToastMessage] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const [chains, setChains] = useState<NetworkChain[]>([]);
   const [chainsLoading, setChainsLoading] = useState<boolean>(false);
+  const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
+  const lastScrollYRef = useRef(0);
+  const lastAutoRefreshTsRef = useRef(0);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -57,35 +69,228 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
     try {
       const ids = await AsyncStorage.getItem('selected_token_ids');
       if (ids) {
-        const list: string[] = JSON.parse(ids);
+        // Sanitize and normalize the saved selection
+        const raw: unknown = JSON.parse(ids);
+        const list: string[] = Array.isArray(raw)
+          ? (raw as unknown[]).map(v => String(v).trim()).filter(v => v.length > 0)
+          : [];
+        if (!Array.isArray(list) || list.length === 0) {
+          setSelectedTokens([]);
+          setHasSelection(false);
+          try { await AsyncStorage.removeItem('selected_token_ids'); } catch {}
+          return;
+        }
+        setHasSelection(true);
         // Try cache first to avoid rate limits and speed up render
         let real = await TokenService.getCachedTokens('ethereum', 200);
         if (real && real.length) {
-          real = real.filter((t) => list.includes(t.id));
+          real = real.filter((t) => list.includes(String(t.id)) || list.includes(String(t.symbol).toLowerCase()));
         }
         // If cache miss or incomplete, fetch by ids
         if (!real || real.length === 0) {
           real = await TokenService.fetchTokensByIds(list);
         }
-        setSelectedTokens(real);
+
+        // Normalize selected list to symbols we support (BTC/ETH/SOL)
+        const toSymbol = (v: string) => {
+          const s = String(v).toLowerCase();
+          if (s === 'btc' || s === 'bitcoin') return 'BTC';
+          if (s === 'eth' || s === 'ethereum') return 'ETH';
+          if (s === 'sol' || s === 'solana') return 'SOL';
+          return s.toUpperCase();
+        };
+        const desiredSymbols = Array.from(new Set(list.map(toSymbol))).filter(s => ['BTC','ETH','SOL'].includes(s));
+        if (desiredSymbols.length === 0) {
+          setSelectedTokens([]);
+          setHasSelection(false);
+          try { await AsyncStorage.removeItem('selected_token_ids'); } catch {}
+          return;
+        }
+
+        // Prefer snapshotted prices from selector if present to keep change rates consistent
+        let snapshot: NetworkToken[] = [];
+        try {
+          const snap = await AsyncStorage.getItem('selectedTokens');
+          if (snap) snapshot = JSON.parse(snap);
+        } catch {}
+
+        // Prefer API data; fallback to defaults for missing symbols
+        const defaultsBySymbol: Record<string, NetworkToken> = {
+          BTC: { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', priceUSDT: 0, changePct24h: 0, color: '#F7931A', iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+          ETH: { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', priceUSDT: 0, changePct24h: 0, color: '#627EEA', iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+          SOL: { id: 'solana', symbol: 'SOL', name: 'Solana', priceUSDT: 0, changePct24h: 0, color: '#9945FF', iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+        };
+
+        const bySymbol: Record<string, NetworkToken> = {};
+        for (const t of real) {
+          const sym = String(t.symbol).toUpperCase();
+          if (['BTC','ETH','SOL'].includes(sym)) {
+            // If multiple, keep the first (API order), but overwrite defaults later
+            if (!bySymbol[sym]) bySymbol[sym] = t;
+          }
+        }
+        // Overwrite with snapshot if available to keep same pricing/change values
+        for (const s of snapshot) {
+          const sym = String(s.symbol).toUpperCase();
+          if (['BTC','ETH','SOL'].includes(sym)) {
+            bySymbol[sym] = { ...bySymbol[sym], ...s };
+          }
+        }
+        // Fill missing symbols from defaults
+        for (const sym of desiredSymbols) {
+          if (!bySymbol[sym]) bySymbol[sym] = defaultsBySymbol[sym];
+        }
+
+        // Order strictly BTC, ETH, SOL but include only those selected
+        const orderSymbols = ['BTC','ETH','SOL'].filter(s => desiredSymbols.includes(s));
+        const final = orderSymbols.map(sym => bySymbol[sym]).filter(Boolean) as NetworkToken[];
+
+        if (!final.length) {
+          setSelectedTokens([]);
+          setHasSelection(false);
+          try { await AsyncStorage.removeItem('selected_token_ids'); } catch {}
+        } else {
+          setSelectedTokens(final);
+        }
       } else {
         setSelectedTokens([]);
+        setHasSelection(false);
       }
     } catch {
       setSelectedTokens([]);
+      setHasSelection(false);
+    }
+  };
+
+  const loadSelectedTokensAndRefresh = async () => {
+    try {
+      const ids = await AsyncStorage.getItem('selected_token_ids');
+      if (ids) {
+        // Sanitize and normalize the saved selection
+        const raw: unknown = JSON.parse(ids);
+        const list: string[] = Array.isArray(raw)
+          ? (raw as unknown[]).map(v => String(v).trim()).filter(v => v.length > 0)
+          : [];
+        if (!Array.isArray(list) || list.length === 0) {
+          setSelectedTokens([]);
+          setHasSelection(false);
+          try { await AsyncStorage.removeItem('selected_token_ids'); } catch {}
+          return;
+        }
+        setHasSelection(true);
+
+        // Fetch fresh market data directly using CoinGecko IDs
+        const coingeckoIds = ['bitcoin', 'ethereum', 'solana'];
+        const freshMarketData = await TokenService.fetchTokensByIds(coingeckoIds);
+        
+        if (freshMarketData && freshMarketData.length > 0) {
+          // Create tokens with fresh market data
+          const tokensWithFreshData: NetworkToken[] = [];
+          
+          // Normalize selected list to symbols we support (BTC/ETH/SOL)
+          const toSymbol = (v: string) => {
+            const s = String(v).toLowerCase();
+            if (s === 'btc' || s === 'bitcoin') return 'BTC';
+            if (s === 'eth' || s === 'ethereum') return 'ETH';
+            if (s === 'sol' || s === 'solana') return 'SOL';
+            return s.toUpperCase();
+          };
+          const desiredSymbols = Array.from(new Set(list.map(toSymbol))).filter(s => ['BTC','ETH','SOL'].includes(s));
+          
+          // Create token objects with fresh market data
+          const defaultsBySymbol: Record<string, NetworkToken> = {
+            BTC: { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', priceUSDT: 0, changePct24h: 0, color: '#F7931A', iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
+            ETH: { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', priceUSDT: 0, changePct24h: 0, color: '#627EEA', iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
+            SOL: { id: 'solana', symbol: 'SOL', name: 'Solana', priceUSDT: 0, changePct24h: 0, color: '#9945FF', iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
+          };
+
+          // Map fresh market data to tokens
+          const freshBySymbol: Record<string, NetworkToken> = {};
+          for (const fresh of freshMarketData) {
+            const sym = String(fresh.symbol).toUpperCase();
+            if (['BTC','ETH','SOL'].includes(sym)) {
+              freshBySymbol[sym] = {
+                ...defaultsBySymbol[sym],
+                ...fresh,
+                id: fresh.id,
+                symbol: fresh.symbol,
+                name: fresh.name,
+                priceUSDT: fresh.priceUSDT,
+                changePct24h: fresh.changePct24h,
+                iconUrl: fresh.iconUrl || defaultsBySymbol[sym].iconUrl,
+              };
+            }
+          }
+
+          // Fill missing symbols from defaults
+          for (const sym of desiredSymbols) {
+            if (!freshBySymbol[sym]) {
+              freshBySymbol[sym] = defaultsBySymbol[sym];
+            }
+          }
+
+          // Order strictly BTC, ETH, SOL but include only those selected
+          const orderSymbols = ['BTC','ETH','SOL'].filter(s => desiredSymbols.includes(s));
+          const final = orderSymbols.map(sym => freshBySymbol[sym]).filter(Boolean) as NetworkToken[];
+
+          if (!final.length) {
+            setSelectedTokens([]);
+            setHasSelection(false);
+            try { await AsyncStorage.removeItem('selected_token_ids'); } catch {}
+          } else {
+            setSelectedTokens(final);
+            console.log('✅ Loaded tokens with fresh market data:', final.map(t => `${t.symbol}: $${t.priceUSDT} (${t.changePct24h}%)`));
+          }
+        } else {
+          // Fallback to original method if API fails
+          await loadSelectedTokens();
+        }
+      } else {
+        setSelectedTokens([]);
+        setHasSelection(false);
+      }
+    } catch (error) {
+      console.error('Failed to load tokens with fresh data:', error);
+      // Fallback to original method
+      await loadSelectedTokens();
     }
   };
 
   useEffect(() => { loadSelectedTokens(); }, []);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', loadSelectedTokens);
+    const unsubscribe = navigation.addListener('focus', async () => {
+      // Clear immediately to avoid showing stale tokens when returning
+      setSelectedTokens([]);
+      // Load tokens and refresh market data
+      await loadSelectedTokensAndRefresh();
+    });
     return unsubscribe;
   }, [navigation]);
 
   useEffect(() => {
-    loadWalletBalance();
+    if (wallet) {
+      console.log(`🔄 Wallet changed to: ${wallet.address}`);
+      // Clear balances first to show loading state
+      setBalance('0.0');
+      setBalances({});
+      // Then load new balances
+      loadWalletBalance();
+    } else {
+      console.log('🔄 No wallet selected');
+      setBalance('0.0');
+      setBalances({});
+    }
   }, [wallet]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (wallet && selectedTokens.length > 0) {
+      console.log(`🔄 Selected tokens changed, loading balances for: ${wallet.address}`);
+      loadTokenBalances();
+    } else {
+      setBalances({});
+    }
+  }, [selectedTokens, wallet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     (async () => {
@@ -124,23 +329,157 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
   const loadWalletBalance = async () => {
     try {
+      setBalanceLoading(true);
       // Skip fetching if wallet is not connected
       if (!wallet) {
+        console.log('No wallet connected, setting balance to 0');
         setBalance('0.0');
         return;
       }
-      const walletBalance = await getWalletBalance();
-      setBalance(walletBalance);
+      
+      console.log(`Loading balance for wallet: ${wallet.address}`);
+      
+      // Clear cache for this wallet to ensure fresh data
+      const ethService = ETHBalanceService.getInstance();
+      ethService.clearCache();
+      
+      // Try to get ETH balance first (since this is primarily an ETH wallet)
+      try {
+        const ethBalance = await ethService.getETHBalance(wallet.address, 'sepolia');
+        const formattedBalance = ethBalance.balance.toFixed(6);
+        setBalance(formattedBalance);
+        console.log(`✅ Main wallet ETH balance: ${formattedBalance} ETH for ${wallet.address}`);
+      } catch (ethError) {
+        console.warn('Failed to get ETH balance, falling back to default:', ethError);
+        // Fallback to the original wallet balance method
+        const walletBalance = await getWalletBalance();
+        setBalance(walletBalance);
+      }
     } catch (error) {
       console.error('Failed to load balance:', error);
+      setBalance('0.0');
+    } finally {
+      setBalanceLoading(false);
+    }
+  };
+
+  const loadTokenBalances = async () => {
+    try {
+      if (!wallet || !selectedTokens.length) {
+        console.log('No wallet or tokens selected, clearing balances');
+        setBalances({});
+        return;
+      }
+
+      console.log(`Loading token balances for wallet: ${wallet.address}`);
+      console.log(`Selected tokens:`, selectedTokens.map(t => t.symbol));
+
+      const newBalances: Record<string, number> = {};
+      const btcService = BTCBalanceService.getInstance();
+      const ethService = ETHBalanceService.getInstance();
+      const solService = SOLBalanceService.getInstance();
+      const addressService = TokenAddressService.getInstance();
+
+      // Load balances for each selected token
+      for (const token of selectedTokens) {
+        try {
+          if (token.symbol.toUpperCase() === 'BTC') {
+            // Get BTC address from mnemonic
+            const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+            if (addressInfo?.address) {
+              const btcBalance = await btcService.getBTCBalance(addressInfo.address, true); // Use testnet
+              newBalances[token.id] = btcBalance.balance;
+              console.log(`✅ BTC Balance for ${addressInfo.address}: ${btcBalance.balance} BTC`);
+            } else {
+              newBalances[token.id] = 0;
+              console.log(`❌ No BTC address found for wallet`);
+            }
+          } else if (token.symbol.toUpperCase() === 'ETH') {
+            // Get ETH balance directly from wallet address (Sepolia testnet)
+            const ethBalance = await ethService.getETHBalance(wallet.address, 'sepolia');
+            newBalances[token.id] = ethBalance.balance;
+            console.log(`✅ ETH Balance for ${wallet.address}: ${ethBalance.balance} ETH`);
+          } else if (token.symbol.toUpperCase() === 'SOL') {
+            // Get SOL address from mnemonic
+            const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+            if (addressInfo?.address) {
+              const solBalance = await solService.getSOLBalance(addressInfo.address, 'devnet');
+              newBalances[token.id] = solBalance.balance;
+              console.log(`✅ SOL Balance for ${addressInfo.address}: ${solBalance.balance} SOL`);
+            } else {
+              newBalances[token.id] = 0;
+              console.log(`❌ No SOL address found for wallet`);
+            }
+          } else {
+            // For other tokens, set to 0 for now (can be extended later)
+            newBalances[token.id] = 0;
+            console.log(`ℹ️ Token ${token.symbol} balance set to 0 (not implemented)`);
+          }
+        } catch (error) {
+          console.error(`❌ Failed to load balance for ${token.symbol}:`, error);
+          newBalances[token.id] = 0;
+        }
+      }
+
+      console.log(`Final token balances:`, newBalances);
+      setBalances(newBalances);
+    } catch (error) {
+      console.error('❌ Failed to load token balances:', error);
+      setBalances({});
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadWalletBalance();
-    // refresh balances for tokens (stub: keep zeros or plug provider later)
+    await Promise.all([
+      loadWalletBalance(),
+      loadTokenBalances(),
+      refreshMarketData()
+    ]);
     setRefreshing(false);
+  };
+
+  const handleScroll = (e: any) => {
+    try {
+      const y = e?.nativeEvent?.contentOffset?.y || 0;
+      const dy = y - lastScrollYRef.current;
+      lastScrollYRef.current = y;
+      const now = Date.now();
+      // Trigger a lightweight refresh when user scrolls downward by >80px,
+      // throttled to avoid excessive calls (every 8s max)
+      if (dy > 80 && !refreshing && !balanceLoading && now - lastAutoRefreshTsRef.current > 8000) {
+        lastAutoRefreshTsRef.current = now;
+        onRefresh();
+      }
+    } catch {}
+  };
+
+  const refreshMarketData = async () => {
+    try {
+      if (!selectedTokens.length) return;
+      // Use exact Coingecko IDs to ensure parity across screens
+      const toId = (sym: string) => {
+        const s = String(sym).toUpperCase();
+        if (s === 'BTC') return 'bitcoin';
+        if (s === 'ETH') return 'ethereum';
+        if (s === 'SOL') return 'solana';
+        return '';
+      };
+      const ids = Array.from(new Set(selectedTokens.map(t => toId(t.symbol)).filter(Boolean)));
+      if (!ids.length) return;
+      const fresh = await TokenService.fetchTokensByIds(ids);
+      if (!fresh || !fresh.length) return;
+      const bySym: Record<string, typeof fresh[number]> = {};
+      for (const f of fresh) {
+        const sym = String(f.symbol).toUpperCase();
+        bySym[sym] = f;
+      }
+      setSelectedTokens((prev) => prev.map(t => {
+        const sym = String(t.symbol).toUpperCase();
+        const f = bySym[sym];
+        return f ? { ...t, priceUSDT: f.priceUSDT, changePct24h: f.changePct24h, iconUrl: f.iconUrl || t.iconUrl } : t;
+      }));
+    } catch {}
   };
 
   const handleSendMoney = () => {
@@ -378,6 +717,16 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       fontWeight: '500',
       marginLeft: 8,
     },
+    globalLoadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
   });
 
   if (!wallet) {
@@ -433,14 +782,14 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
                 </TouchableOpacity>
               </View>
               <View style={styles.vDivider} />
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setNetworkSheetVisible(true)}
                 style={[styles.networkPill, { backgroundColor: theme.colors.primary + '15' }]}
               >
                 <Text style={styles.networkText}>{networkLabel}</Text>
                 <Icon name="arrow-drop-down" size={18} color={theme.colors.primary} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
           <View style={styles.headerActions}>
@@ -456,6 +805,8 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       <ScrollView
         style={styles.scrollContainer}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -463,11 +814,12 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       <View style={styles.balanceCard}>
         <View style={styles.balanceRow}>
-          <Text style={styles.bigBalance}>{isBalanceHidden ? '•••••' : `${Number(balance).toFixed(2)} USDT`}</Text>
+          <Text style={styles.bigBalance}>{isBalanceHidden ? '•••••' : `${Number(balance).toFixed(6)} ETH`}</Text>
           <TouchableOpacity style={styles.eyeButton} onPress={() => setIsBalanceHidden(v => !v)}>
             <Icon name={isBalanceHidden ? 'visibility-off' : 'visibility'} size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
+        {/* Inline spinner removed; using full-screen overlay below */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={[styles.pillButton, styles.pillBordered]} onPress={handleSendMoney}>
             <Text style={[styles.pillTextDark, { color: theme.colors.primary }]}>Send</Text>
@@ -502,10 +854,13 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             </TouchableOpacity>
           </View>
 
-          {selectedTokens
+        {console.log('selectedTokens', selectedTokens)}
+        {console.log('hasSelection', hasSelection)}
+
+          {(selectedTokens.length > 0 ? selectedTokens : [])
             .filter(t => !hideSmallAssets || (balances[t.id] || 0) > 0)
             .map((t, idx) => (
-              <View key={t.symbol}>
+              <View key={`${String(t.id).toLowerCase()}-${idx}`}>
                 <View style={styles.tokenRow}>
                   {t.iconUrl ? (
                     <Image source={{ uri: t.iconUrl }} style={[styles.tokenIcon, { borderRadius: 14 }]} />
@@ -526,8 +881,19 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
                     </View>
                   </View>
                   <View style={styles.tokenRightCol}>
-                    <Text style={{ color: theme.colors.text }}>{balances[t.id] || 0}</Text>
-                    <Text style={[{ color: theme.colors.textSecondary }]}>{`${(balances[t.id] || 0) * (t.priceUSDT || 0)} USDT`}</Text>
+                    <Text style={{ color: theme.colors.text }}>
+                      {t.symbol === 'BTC' 
+                        ? `${(balances[t.id] || 0).toFixed(8)} BTC` 
+                        : t.symbol === 'ETH'
+                        ? `${(balances[t.id] || 0).toFixed(6)} ETH`
+                        : t.symbol === 'SOL'
+                        ? `${(balances[t.id] || 0).toFixed(6)} SOL`
+                        : `${balances[t.id] || 0}`
+                      }
+                    </Text>
+                    <Text style={[{ color: theme.colors.textSecondary }]}>
+                      {`${((balances[t.id] || 0) * (t.priceUSDT || 0)).toFixed(2)} USDT`}
+                    </Text>
                   </View>
                 </View>
                 {idx < selectedTokens.length - 1 && <View style={styles.divider} />}
@@ -544,6 +910,12 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       )}
 
       </ScrollView>
+
+      {balanceLoading && (
+        <View style={styles.globalLoadingOverlay} pointerEvents="auto">
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      )}
 
       {toastMessage !== '' && (
         <Animated.View style={[styles.toastContainer, { opacity: toastOpacity }]}>
