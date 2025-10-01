@@ -19,7 +19,6 @@ interface Web3AuthContextType {
   logout: () => Promise<void>;
   createWallet: () => Promise<void>;
   importWalletFromMnemonic: (mnemonic: string) => Promise<void>;
-  importWalletFromPrivateKey: (privateKey: string) => Promise<void>;
   getWalletBalance: () => Promise<string>;
   sendTransaction: (to: string, amount: string) => Promise<string>;
   validateMnemonic: (mnemonic: string) => boolean;
@@ -218,31 +217,6 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
     }
   };
 
-  // Import wallet from private key
-  const importWalletFromPrivateKey = async (privateKey: string) => {
-    try {
-      setLoading(true);
-      console.log('🔑 Importing wallet from private key...');
-      
-      const walletInfo = await walletService.importWalletFromPrivateKey(privateKey);
-      
-      const withId: WalletInfo = { ...walletInfo, id: walletInfo.address, name: `Wallet${wallets.length + 1}` };
-      const next = [...wallets, withId];
-      setWallets(next);
-      setWallet(withId);
-      setIsLoggedIn(true);
-      await AsyncStorage.setItem('wallets', JSON.stringify(next));
-      
-      console.log('✅ Wallet imported from private key:', {
-        address: walletInfo.address
-      });
-    } catch (error) {
-      console.error('❌ Failed to import wallet from private key:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Get wallet balance
   const getWalletBalance = async (): Promise<string> => {
@@ -352,7 +326,6 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
     logout,
     createWallet,
     importWalletFromMnemonic,
-    importWalletFromPrivateKey,
     getWalletBalance,
     sendTransaction,
     validateMnemonic,

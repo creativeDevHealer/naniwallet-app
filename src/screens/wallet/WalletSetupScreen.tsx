@@ -34,7 +34,6 @@ export const WalletSetupScreen: React.FC<WalletSetupScreenProps> = ({ navigation
   const { 
     createWallet, 
     importWalletFromMnemonic, 
-    importWalletFromPrivateKey,
     validateMnemonic,
     wallet,
     loading 
