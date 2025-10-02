@@ -477,8 +477,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const quickActions = [
     { icon: 'account-balance-wallet', title: t('my_wallet', locale), color: theme.colors.primary, action: 'WalletDashboard' },
-    { icon: 'send', title: t('send_money', locale), color: theme.colors.secondary, action: 'SelectSendToken' },
-    { icon: 'add-circle', title: t('top_up', locale), color: theme.colors.success, action: 'TopUp' },
+    { icon: 'savings', title: t('Savings', locale), color: theme.colors.success, action: 'Savings' },
     { icon: 'calculate', title: t('zakat_calculator', locale), color: theme.colors.warning, action: 'ZakatCalculator' },
     { icon: 'trending-up', title: t('investments', locale), color: theme.colors.primary, action: 'Investments' },
   ];

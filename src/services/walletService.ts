@@ -114,12 +114,12 @@ export class WalletService {
   }
 
   /**
-   * Send transaction
+   * Send ETH transaction
    */
   public async sendTransaction(
     to: string, 
     amount: string, 
-    provider?: ethers.Provider
+    provider: ethers.Provider
   ): Promise<string> {
     try {
       if (!this.wallet) {
@@ -127,9 +127,7 @@ export class WalletService {
       }
 
       if (!provider) {
-        // For development, return a mock transaction hash
-        console.log('📤 Mock transaction for development');
-        return '0x' + Math.random().toString(16).substr(2, 64);
+        throw new Error('Provider is required for real transactions');
       }
 
       const connectedWallet = this.wallet.connect(provider);
@@ -137,8 +135,9 @@ export class WalletService {
       // Convert amount to wei
       const amountInWei = ethers.parseEther(amount);
       
-      // Get gas price (simplified for compatibility)
-      const gasPrice = ethers.parseUnits('20', 'gwei');
+      // Get current gas price
+      const feeData = await provider.getFeeData();
+      const gasPrice = feeData.gasPrice || ethers.parseUnits('20', 'gwei');
       
       // Estimate gas
       const gasEstimate = await connectedWallet.estimateGas({
@@ -146,21 +145,27 @@ export class WalletService {
         value: amountInWei
       });
 
+      // Add 10% buffer to gas estimate
+      const gasLimit = (gasEstimate * 110n) / 100n;
+
       // Send transaction
       const tx = await connectedWallet.sendTransaction({
         to: to,
         value: amountInWei,
         gasPrice: gasPrice,
-        gasLimit: gasEstimate
+        gasLimit: gasLimit
       });
 
-      console.log('📤 Transaction sent:', tx.hash);
+      console.log('📤 ETH Transaction sent:', tx.hash);
+      
+      // Wait for transaction to be mined
+      const receipt = await tx.wait();
+      console.log('✅ ETH Transaction confirmed:', receipt?.hash);
+      
       return tx.hash;
     } catch (error) {
-      console.error('❌ Failed to send transaction:', error);
-      // For development, return a mock transaction hash
-      console.log('📤 Returning mock transaction hash due to provider error');
-      return '0x' + Math.random().toString(16).substr(2, 64);
+      console.error('❌ Failed to send ETH transaction:', error);
+      throw error;
     }
   }
 

@@ -45,6 +45,8 @@ export default class TokenAddressService {
 
       let info: TokenAddressInfo;
 
+      console.log('symbol',   symbol);
+
       if (symbol === 'BTC') {
         const derived = this.tryDeriveBtcP2WpkhAddress(true, mnemonic);
         info = {
@@ -54,8 +56,24 @@ export default class TokenAddressService {
           isNative: true
         };
       } else if (symbol === 'ETH') {
+        // Derive ETH address directly from mnemonic to avoid relying on
+        // in-memory wallet state (which may be empty after app reload)
+        let ethAddress = '';
+        try {
+          if (mnemonic && mnemonic.trim().length > 0) {
+            const ethWallet = Wallet.fromPhrase(mnemonic);
+            ethAddress = ethWallet.address;
+          } else {
+            // Fallback to current wallet if available
+            ethAddress = WalletService.getInstance().getCurrentWallet()?.address || '';
+          }
+        } catch (e) {
+          // Final fallback to wallet service (if mnemonic invalid/unavailable)
+          ethAddress = WalletService.getInstance().getCurrentWallet()?.address || '';
+        }
+
         info = {
-          address: WalletService.getInstance().getCurrentWallet()?.address,
+          address: ethAddress,
           network: 'Ethereum',
           networkId: 'ethereum',
           isNative: true

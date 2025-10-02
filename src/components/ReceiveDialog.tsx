@@ -55,6 +55,7 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
         try {
           const tokenAddressService = TokenAddressService.getInstance();
           const info = await tokenAddressService.getTokenAddressInfo(token, currentWallet.mnemonic);
+          console.log('info', info);
           if (!isMounted) return;
           setAddress(info?.address);
           setAddressInfo(info || null);

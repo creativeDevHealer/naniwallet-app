@@ -16,8 +16,16 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useWeb3Auth } from '../context/Web3AuthContext';
+import { useCurrency } from '../context/CurrencyContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NetworkToken } from '../services/tokenService';
+import BTCBalanceService from '../services/btcBalanceService';
+import ETHBalanceService from '../services/ethBalanceService';
+import SOLBalanceService from '../services/solBalanceService';
+import TokenAddressService from '../services/tokenAddressService';
+import BTCSendService from '../services/btcSendService';
+import ETHSendService from '../services/ethSendService';
+import SOLSendService from '../services/solSendService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -30,24 +38,119 @@ interface SendDialogProps {
 export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose }) => {
   const { theme } = useTheme();
   const { activeWallet, wallet, wallets } = useWeb3Auth();
+  const { selectedCurrency, convertAmount, formatAmount } = useCurrency();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [balance, setBalance] = useState('0');
+  const [balanceLoading, setBalanceLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [currencyValue, setCurrencyValue] = useState('0.00');
 
   useEffect(() => {
-    if (visible && token) {
+    if (visible && token && wallet) {
       console.log('SendDialog: Token received:', token);
-      // Set mock balance for the selected token
-      setBalance('0');
+      console.log('SendDialog: Wallet:', wallet.address);
+      
+      // Fetch actual balance for the selected token
+      fetchTokenBalance();
+      
       // Reset form when dialog opens
       setRecipientAddress('');
       setAmount('');
+      setCurrencyValue('0.00');
       setLoading(false);
       setImageError(false);
     }
-  }, [visible, token]);
+  }, [visible, token, wallet]);
+
+  const fetchTokenBalance = async () => {
+    if (!token || !wallet) return;
+    
+    setBalanceLoading(true);
+    try {
+      console.log(`🔍 === BALANCE FETCHING DEBUG ===`);
+      console.log(`🔍 Token: ${token.symbol}`);
+      console.log(`🔍 Wallet Address: ${wallet.address}`);
+      console.log(`🔍 Wallet Mnemonic: ${wallet.mnemonic ? 'Available' : 'Not available'}`);
+      console.log(`🔍 Wallet Object Keys:`, Object.keys(wallet));
+      console.log(`🔍 Full Wallet Object:`, wallet);
+      
+      const addressService = TokenAddressService.getInstance();
+      
+      if (token.symbol.toUpperCase() === 'BTC') {
+        console.log(`🔍 Fetching BTC balance using proper BTC address derivation`);
+        
+        // Get proper BTC address from mnemonic
+        try {
+          console.log(`🔍 Calling getTokenAddressInfo for BTC with mnemonic: ${wallet.mnemonic ? 'Present' : 'Missing'}`);
+          const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+          console.log(`🔍 BTC Address Info Result:`, addressInfo);
+          
+          if (addressInfo?.address) {
+            console.log(`🔍 BTC Address: ${addressInfo.address}`);
+            const btcService = BTCBalanceService.getInstance();
+            const balanceInfo = await btcService.getBTCBalance(addressInfo.address, true); // Use testnet
+            const formattedBalance = balanceInfo.balance.toFixed(8);
+            setBalance(formattedBalance);
+            console.log(`✅ BTC Balance: ${balanceInfo.balance} BTC (${balanceInfo.balanceSatoshis} satoshis)`);
+            console.log(`📊 Formatted balance: ${formattedBalance} BTC`);
+          } else {
+            console.log(`❌ No BTC address found for wallet - addressInfo:`, addressInfo);
+            setBalance('0');
+          }
+        } catch (btcError) {
+          console.error(`❌ BTC address derivation failed:`, btcError);
+          setBalance('0');
+        }
+      } else if (token.symbol.toUpperCase() === 'ETH') {
+        console.log(`🔍 Fetching ETH balance for address: ${wallet.address}`);
+        const ethService = ETHBalanceService.getInstance();
+        const balanceInfo = await ethService.getETHBalance(wallet.address, 'sepolia'); // Use testnet
+        const formattedBalance = balanceInfo.balance.toFixed(6);
+        setBalance(formattedBalance);
+        console.log(`✅ ETH Balance: ${balanceInfo.balance} ETH (${balanceInfo.balanceWei} wei)`);
+        console.log(`📊 Formatted balance: ${formattedBalance} ETH`);
+        console.log(`🔢 Raw balance number: ${balanceInfo.balance}`);
+      } else if (token.symbol.toUpperCase() === 'SOL') {
+        console.log(`🔍 Fetching SOL balance using proper SOL address derivation`);
+        
+        // Get proper SOL address from mnemonic
+        try {
+          console.log(`🔍 Calling getTokenAddressInfo for SOL with mnemonic: ${wallet.mnemonic ? 'Present' : 'Missing'}`);
+          const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+          console.log(`🔍 SOL Address Info Result:`, addressInfo);
+          
+          if (addressInfo?.address) {
+            console.log(`🔍 SOL Address: ${addressInfo.address}`);
+            const solService = SOLBalanceService.getInstance();
+            const balanceInfo = await solService.getBalance(addressInfo.address, 'devnet');
+            const formattedBalance = balanceInfo.balance.toFixed(6);
+            setBalance(formattedBalance);
+            console.log(`✅ SOL Balance: ${balanceInfo.balance} SOL (${balanceInfo.balanceLamports} lamports)`);
+            console.log(`📊 Formatted balance: ${formattedBalance} SOL`);
+          } else {
+            console.log(`❌ No SOL address found for wallet - addressInfo:`, addressInfo);
+            setBalance('0');
+          }
+        } catch (solError) {
+          console.error(`❌ SOL address derivation failed:`, solError);
+          setBalance('0');
+        }
+      } else {
+        // For other tokens, you might want to implement additional services
+        console.log(`⚠️ Balance fetching not implemented for ${token.symbol}`);
+        setBalance('0');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching token balance:', error);
+      console.error('❌ Error details:', error);
+      setBalance('0');
+    } finally {
+      setBalanceLoading(false);
+      console.log(`🔍 === BALANCE FETCHING COMPLETE ===`);
+    }
+  };
 
   const getTokenIconUrl = (idOrSymbol?: string | null) => {
     if (!idOrSymbol) return undefined;
@@ -76,29 +179,108 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
       return;
     }
 
+    if (!wallet || !wallet.mnemonic) {
+      Alert.alert('Error', 'Wallet not available');
+      return;
+    }
+
     try {
       setLoading(true);
       
-      // Simulate sending transaction
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'Transaction Sent',
-        `Successfully sent ${amount} ${token?.symbol} to ${recipientAddress.slice(0, 10)}...${recipientAddress.slice(-10)}`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              setRecipientAddress('');
-              setAmount('');
-              onClose();
+      console.log('🚀 Starting real transaction:', {
+        token: token?.symbol,
+        amount: amount,
+        recipient: recipientAddress,
+        from: wallet.address
+      });
+
+      let result;
+
+      if (token?.symbol.toUpperCase() === 'BTC') {
+        console.log('📤 Sending BTC transaction...');
+        const btcService = BTCSendService.getInstance();
+        const addressService = TokenAddressService.getInstance();
+        const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+        
+        if (!addressInfo?.address) {
+          throw new Error('Failed to get BTC address');
+        }
+
+        result = await btcService.sendBTC({
+          senderAddress: addressInfo.address,
+          receiverAddress: recipientAddress,
+          amountSatoshis: Math.floor(parseFloat(amount) * 100000000), // Convert to satoshis
+          network: 'testnet', // Use testnet for now
+          senderPrivateKey: wallet.privateKey,
+          mnemonic: wallet.mnemonic // Pass mnemonic for proper address derivation
+        });
+
+      } else if (token?.symbol.toUpperCase() === 'ETH') {
+        console.log('📤 Sending ETH transaction...');
+        const ethService = ETHSendService.getInstance();
+        
+        result = await ethService.sendETH({
+          fromAddress: wallet.address,
+          toAddress: recipientAddress,
+          amountETH: parseFloat(amount),
+          network: 'sepolia', // Use sepolia testnet for now
+          privateKey: wallet.privateKey,
+          mnemonic: wallet.mnemonic
+        });
+
+      } else if (token?.symbol.toUpperCase() === 'SOL') {
+        console.log('📤 Sending SOL transaction...');
+        const solService = SOLSendService.getInstance();
+        const addressService = TokenAddressService.getInstance();
+        const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
+        
+        if (!addressInfo?.address) {
+          throw new Error('Failed to get SOL address');
+        }
+
+        result = await solService.sendSOL({
+          fromAddress: addressInfo.address,
+          toAddress: recipientAddress,
+          amountSOL: parseFloat(amount),
+          network: 'devnet', // Use devnet for now
+          privateKey: wallet.privateKey,
+          mnemonic: wallet.mnemonic
+        });
+
+      } else {
+        throw new Error(`Sending ${token?.symbol} not implemented yet`);
+      }
+
+      if (result.success) {
+        console.log('✅ Transaction successful:', result.txHash);
+        Alert.alert(
+          'Transaction Sent',
+          `Successfully sent ${amount} ${token?.symbol} to ${recipientAddress.slice(0, 10)}...${recipientAddress.slice(-10)}\n\nTransaction Hash: ${result.txHash}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setRecipientAddress('');
+                setAmount('');
+                setCurrencyValue('0.00');
+                onClose();
+              }
             }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error sending transaction:', error);
-      Alert.alert('Error', 'Failed to send transaction. Please try again.');
+          ]
+        );
+        
+        // Refresh balance after successful transaction
+        setTimeout(() => {
+          fetchTokenBalance();
+        }, 2000);
+      } else {
+        console.error('❌ Transaction failed:', result.error);
+        Alert.alert('Transaction Failed', result.error || 'Unknown error occurred');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Send transaction error:', error);
+      Alert.alert('Error', error.message || 'Failed to send transaction. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -106,6 +288,30 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
 
   const handleMaxAmount = () => {
     setAmount(balance);
+    calculateCurrencyValue(balance);
+  };
+
+  const handleRefreshBalance = async () => {
+    if (token && wallet) {
+      await fetchTokenBalance();
+    }
+  };
+
+  const calculateCurrencyValue = (amount: string) => {
+    if (!amount || !token?.priceUSDT || isNaN(parseFloat(amount))) {
+      setCurrencyValue('0.00');
+      return;
+    }
+    
+    const numericAmount = parseFloat(amount);
+    const usdAmount = numericAmount * token.priceUSDT;
+    const convertedAmount = convertAmount(usdAmount, 'USD', selectedCurrency);
+    setCurrencyValue(formatAmount(convertedAmount));
+  };
+
+  const handleAmountChange = (text: string) => {
+    setAmount(text);
+    calculateCurrencyValue(text);
   };
 
   const styles = StyleSheet.create({
@@ -194,19 +400,38 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
     balanceInfo: {
       alignItems: 'flex-end',
     },
+    balanceHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
     balanceLabel: {
       fontSize: 13,
       color: theme.colors.textSecondary,
-      marginBottom: 6,
       fontWeight: '600',
       textTransform: 'uppercase',
       letterSpacing: 0.5,
+      marginRight: 8,
+    },
+    refreshButton: {
+      padding: 4,
+      borderRadius: 12,
+      backgroundColor: theme.colors.backgroundSecondary,
+    },
+    refreshButtonDisabled: {
+      opacity: 0.5,
     },
     balanceAmount: {
       fontSize: 20,
       fontWeight: '800',
       color: theme.colors.text,
       letterSpacing: -0.3,
+    },
+    balanceNote: {
+      fontSize: 12,
+      color: theme.colors.textSecondary,
+      marginTop: 4,
+      fontStyle: 'italic',
     },
     inputContainer: {
       marginBottom: 24,
@@ -269,6 +494,20 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
       fontWeight: '800',
       color: '#FFFFFF',
       letterSpacing: 0.5,
+    },
+    usdValueContainer: {
+      marginTop: 8,
+      alignItems: 'center',
+    },
+    usdValueLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.colors.textSecondary,
+      backgroundColor: theme.colors.backgroundSecondary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 12,
+      overflow: 'hidden',
     },
     sendButton: {
       backgroundColor: theme.colors.primary,
@@ -391,8 +630,24 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                   <Text style={styles.tokenName}>{token.name || 'Unknown Token'}</Text>
                 </View>
                 <View style={styles.balanceInfo}>
-                  <Text style={styles.balanceLabel}>Available</Text>
-                  <Text style={styles.balanceAmount}>{balance} {token.symbol || 'Token'}</Text>
+                  <View style={styles.balanceHeader}>
+                    <Text style={styles.balanceLabel}>Available</Text>
+                    <TouchableOpacity 
+                      style={[styles.refreshButton, balanceLoading && styles.refreshButtonDisabled]} 
+                      onPress={handleRefreshBalance}
+                      activeOpacity={0.7}
+                      disabled={balanceLoading}
+                    >
+                      <Icon 
+                        name="refresh" 
+                        size={16} 
+                        color={balanceLoading ? theme.colors.textTertiary : theme.colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.balanceAmount}>
+                    {balanceLoading ? 'Loading...' : `${balance} ${token.symbol || 'Token'}`}
+                  </Text>
                 </View>
               </View>
 
@@ -425,7 +680,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                     placeholder="0.00"
                     placeholderTextColor={theme.colors.textSecondary}
                     value={amount}
-                    onChangeText={setAmount}
+                    onChangeText={handleAmountChange}
                     keyboardType="decimal-pad"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -438,6 +693,11 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                     <Text style={styles.maxButtonText}>MAX</Text>
                   </TouchableOpacity>
                 </View>
+                {amount.trim() && parseFloat(amount) > 0 && (
+                  <View style={styles.usdValueContainer}>
+                    <Text style={styles.usdValueLabel}>≈ {currencyValue} {selectedCurrency}</Text>
+                  </View>
+                )}
               </View>
             </ScrollView>
 

@@ -11,6 +11,9 @@ export default class BTCBalanceService {
   private static instance: BTCBalanceService;
   private cache: Map<string, { info: BTCBalanceInfo; ts: number }> = new Map();
   private readonly CACHE_TTL = 30 * 1000; // 30 seconds for balance data
+  private rateLimitCache: Map<string, { lastCall: number; callCount: number }> = new Map();
+  private readonly RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
+  private readonly MAX_CALLS_PER_WINDOW = 5; // Max 5 calls per minute per provider
 
   static getInstance(): BTCBalanceService {
     if (!BTCBalanceService.instance) {
@@ -19,12 +22,15 @@ export default class BTCBalanceService {
     return BTCBalanceService.instance;
   }
 
-  private async fetchWithTimeout(url: string, timeoutMs: number = 12000): Promise<Response> {
+  private async fetchWithTimeout(url: string, timeoutMs: number = 12000, options: RequestInit = {}): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       // @ts-ignore fetch available in RN
-      const resp = await fetch(url, { signal: controller.signal });
+      const resp = await fetch(url, { 
+        ...options,
+        signal: controller.signal 
+      });
       return resp as unknown as Response;
     } finally {
       clearTimeout(timer);
@@ -79,17 +85,28 @@ export default class BTCBalanceService {
   }
 
   /**
-   * Fetch BTC balance from testnet API
+   * Fetch BTC balance from testnet API with improved rate limiting handling
    */
   private async fetchTestnetBalance(address: string): Promise<BTCBalanceInfo> {
-    // Primary: BlockCypher
+    // Primary: BlockCypher with rate limiting protection
     try {
-      const response = await this.fetchWithTimeout(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}/balance`, 7000);
+      // Check rate limits before making the call
+      if (this.isRateLimited('blockcypher')) {
+        console.warn('⚠️ BlockCypher rate limited, skipping to fallback');
+        throw new Error('Rate limited - skipping to fallback');
+      }
+      
+      const response = await this.fetchWithTimeout(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}/balance`, 7000, {
+        headers: {
+          'Authorization': 'Bearer 924fe42b41d74c378c9311a3c620336d',
+        }
+      });
       if (!response.ok) {
-        // Handle rate limit gracefully
+        // Handle rate limit gracefully with exponential backoff
         if (response.status === 429) {
-          console.warn('BlockCypher rate limited (429). Falling back to Blockstream.');
-          await this.sleep(1000);
+          console.warn('BlockCypher rate limited (429). Implementing backoff strategy...');
+          await this.sleep(3000); // Wait 3 seconds before fallback
+          console.warn('Falling back to Blockstream due to rate limiting.');
         } else {
           console.warn(`BlockCypher responded ${response.status}. Falling back.`);
         }
@@ -109,8 +126,13 @@ export default class BTCBalanceService {
       } else {
         console.log('Testnet balance fetch failed (primary), trying fallback');
       }
-      // Fallback: Blockstream
+      // Fallback: Blockstream with rate limiting protection
       try {
+        if (this.isRateLimited('blockstream')) {
+          console.warn('⚠️ Blockstream rate limited, skipping to second fallback');
+          throw new Error('Rate limited - skipping to second fallback');
+        }
+        
         const response = await this.fetchWithTimeout(`https://blockstream.info/testnet/api/address/${address}`, 12000);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -130,8 +152,13 @@ export default class BTCBalanceService {
         if (!fmsg.includes('Abort')) {
           console.log('Blockstream fallback failed; trying mempool.space');
         }
-        // Second fallback: mempool.space testnet (compatible API)
+        // Second fallback: mempool.space testnet (compatible API) with rate limiting protection
         try {
+          if (this.isRateLimited('mempool')) {
+            console.warn('⚠️ Mempool rate limited, using cached/zero balance');
+            throw new Error('Rate limited - using cached/zero balance');
+          }
+          
           const response = await this.fetchWithTimeout(`https://mempool.space/testnet/api/address/${address}`, 12000);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -148,6 +175,13 @@ export default class BTCBalanceService {
           };
         } catch (thirdErr) {
           console.log('All BTC testnet providers failed; returning cached/zero');
+          // Check if we have cached data to return
+          const cached = this.cache.get(address);
+          if (cached && (Date.now() - cached.ts) < this.CACHE_TTL * 2) {
+            console.log('Returning cached balance due to rate limiting');
+            return cached.info;
+          }
+          
           // Gracefully return zero to avoid redbox
           return {
             balance: 0,
@@ -166,7 +200,11 @@ export default class BTCBalanceService {
   private async fetchMainnetBalance(address: string): Promise<BTCBalanceInfo> {
     try {
       // Using BlockCypher API for mainnet
-      const response = await fetch(`https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`);
+      const response = await fetch(`https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`, {
+        headers: {
+          'Authorization': 'Bearer 924fe42b41d74c378c9311a3c620336d',
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -223,9 +261,44 @@ export default class BTCBalanceService {
   }
 
   /**
+   * Check if we're within rate limits for a provider
+   */
+  private isRateLimited(provider: string): boolean {
+    const now = Date.now();
+    const rateLimitKey = provider;
+    const rateLimitInfo = this.rateLimitCache.get(rateLimitKey);
+    
+    if (!rateLimitInfo) {
+      this.rateLimitCache.set(rateLimitKey, { lastCall: now, callCount: 1 });
+      return false;
+    }
+    
+    // Reset counter if window has passed
+    if (now - rateLimitInfo.lastCall > this.RATE_LIMIT_WINDOW) {
+      this.rateLimitCache.set(rateLimitKey, { lastCall: now, callCount: 1 });
+      return false;
+    }
+    
+    // Check if we've exceeded the limit
+    if (rateLimitInfo.callCount >= this.MAX_CALLS_PER_WINDOW) {
+      console.warn(`⚠️ Rate limit exceeded for ${provider}. Call count: ${rateLimitInfo.callCount}`);
+      return true;
+    }
+    
+    // Update call count
+    this.rateLimitCache.set(rateLimitKey, { 
+      lastCall: now, 
+      callCount: rateLimitInfo.callCount + 1 
+    });
+    
+    return false;
+  }
+
+  /**
    * Clear cache (useful for testing or manual refresh)
    */
   clearCache(): void {
     this.cache.clear();
+    this.rateLimitCache.clear();
   }
 }

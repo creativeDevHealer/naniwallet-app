@@ -29,6 +29,9 @@ import { NotificationSettingsScreen } from '../screens/main/NotificationsScreen'
 import { NotificationScreen } from '../screens/main/NotificationScreen';
 import { AccountProfileScreen } from '../screens/main/AccountProfileScreen';
 import { LanguageScreen } from '../screens/main/LanguageScreen';
+import { SavingsScreen } from '../screens/main/SavingsScreen';
+import { InvestmentsScreen } from '../screens/main/InvestmentsScreen';
+import { ZakatCalculatorScreen } from '../screens/main/ZakatCalculatorScreen';
 
 // Wallet Screens
 import { WalletSetupScreen } from '../screens/wallet/WalletSetupScreen';
@@ -141,6 +144,9 @@ const MainStack: React.FC = () => {
       <Stack.Screen name="Notification" component={NotificationScreen} />
       <Stack.Screen name="AccountProfile" component={AccountProfileScreen} />
       <Stack.Screen name="Language" component={LanguageScreen} />
+      <Stack.Screen name="Savings" component={SavingsScreen} />
+      <Stack.Screen name="Investments" component={InvestmentsScreen} />
+      <Stack.Screen name="ZakatCalculator" component={ZakatCalculatorScreen} />
       <Stack.Screen name="SelectToken" component={SelectTokenScreen} />
       <Stack.Screen name="WalletSelect" component={WalletSelectScreen} />
       <Stack.Screen name="ManageWallet" component={ManageWalletScreen} />
