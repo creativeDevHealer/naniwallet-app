@@ -927,7 +927,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerIconBtn} onPress={() => showToast('Coming soon')}>
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('TransactionHistory')}>
               <Icon name="history" size={20} color={theme.colors.text} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notification')}>

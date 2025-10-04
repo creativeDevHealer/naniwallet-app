@@ -47,6 +47,7 @@ import { SelectReceiveTokenScreen } from '../screens/transaction/SelectReceiveTo
 import ReceiveScreen from '../screens/transaction/ReceiveScreen';
 import { SelectSendTokenScreen } from '../screens/transaction/SelectSendTokenScreen';
 import { SendScreen } from '../screens/transaction/SendScreen';
+import { TransactionHistoryScreen } from '../screens/transaction/TransactionHistoryScreen';
 
 // Loading Screen Component
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -158,6 +159,7 @@ const MainStack: React.FC = () => {
       <Stack.Screen name="TopUp" component={TopUpScreen} />
       <Stack.Screen name="SelectReceiveToken" component={SelectReceiveTokenScreen} />
       <Stack.Screen name="ReceiveDialog" component={ReceiveScreen} />
+      <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
       {/* KYC Screens - Available from main app for re-verification */}
       <Stack.Screen name="KYCWelcome" component={KYCWelcomeScreen as any} />
       <Stack.Screen name="KYCPersonalInfo" component={KYCPersonalInfoScreen as any} />
