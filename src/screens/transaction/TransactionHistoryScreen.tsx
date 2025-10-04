@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTranslation } from '../../i18n';
 import BackendTransactionService, { Transaction } from '../../services/backendTransactionService';
 import TokenAddressService from '../../services/tokenAddressService';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -28,6 +29,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
   const { theme } = useTheme();
   const { wallet } = useWeb3Auth();
   const { formatPrice } = useCurrency();
+  const { t, formatRelativeTime, isRTL, getTextAlign } = useTranslation();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -284,11 +286,11 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
     if (isSendTransaction) {
       // If we sent it, show the recipient address
       displayAddress = item.toAddress || '';
-      addressLabel = 'To: ';
+      addressLabel = t('to');
     } else if (isReceiveTransaction) {
       // If we received it, show the sender address
       displayAddress = item.senderAddress || item.ethaddress || '';
-      addressLabel = 'From: ';
+      addressLabel = t('from');
     } else {
       // Fallback for other cases
       displayAddress = item.toAddress || item.senderAddress || '';
@@ -311,10 +313,10 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
         <View style={styles.transactionDetails}>
           <View style={styles.transactionHeader}>
             <Text style={styles.transactionType}>
-              {transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} {item.token}
+              {t(transactionType)} {item.token}
             </Text>
             <Text style={styles.transactionTime}>
-              {formatDate(timestamp)}
+              {formatRelativeTime(new Date(timestamp))}
             </Text>
           </View>
           
@@ -334,7 +336,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
                 styles.transactionStatus,
                 { color: getTransactionColor(transactionType, item.status) }
               ]}>
-                {item.status}
+                {t(item.status)}
               </Text>
             </View>
           </View>
@@ -346,9 +348,9 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Icon name="receipt-long" size={64} color={theme.colors.textSecondary} />
-      <Text style={styles.emptyTitle}>No Transactions Yet</Text>
+      <Text style={styles.emptyTitle}>{t('no_transactions')}</Text>
       <Text style={styles.emptySubtitle}>
-        Your transaction history will appear here once you start making transactions.
+        {t('transaction_history_will_appear')}
       </Text>
     </View>
   );
@@ -532,7 +534,9 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
         >
           <Icon name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transaction History</Text>
+        <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+          {t('transaction_history')}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -549,7 +553,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
             styles.filterButtonText,
             selectedFilter === 'all' && styles.filterButtonTextActive
           ]}>
-            All
+            {t('all')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -563,7 +567,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
             styles.filterButtonText,
             selectedFilter === 'send' && styles.filterButtonTextActive
           ]}>
-            Sent
+            {t('sent')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -577,7 +581,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
             styles.filterButtonText,
             selectedFilter === 'receive' && styles.filterButtonTextActive
           ]}>
-            Received
+            {t('received')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -586,7 +590,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Loading transactions...</Text>
+          <Text style={styles.loadingText}>{t('loading')}</Text>
         </View>
       ) : (
         <FlatList
@@ -621,7 +625,7 @@ export const TransactionHistoryScreen: React.FC<TransactionHistoryScreenProps> =
                   fontSize: 14,
                   color: theme.colors.textSecondary
                 }}>
-                  Loading more...
+                  {t('loading_more')}
                 </Text>
               </View>
             ) : null

@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -21,6 +22,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
   navigation,
 }) => {
   const { theme } = useTheme();
+  const { t, isRTL, getTextAlign } = useTranslation();
   const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,12 +35,12 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
-      setError('Email is required');
+      setError(t('email_required'));
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setError(t('email_invalid'));
       return;
     }
 
@@ -49,7 +51,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
       await resetPassword(email);
       setEmailSent(true);
     } catch (error: any) {
-      Alert.alert('Reset Failed', error.message);
+      Alert.alert(t('reset_failed'), error.message);
     } finally {
       setIsLoading(false);
     }
@@ -165,20 +167,24 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           >
             <Icon name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reset Password</Text>
+          <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+            {t('reset_password')}
+          </Text>
         </View>
 
         <View style={styles.successContainer}>
           <View style={styles.successIcon}>
             <Icon name="email" size={40} color={theme.colors.success} />
           </View>
-          <Text style={styles.successTitle}>Check Your Email</Text>
-          <Text style={styles.successMessage}>
-            We've sent a password reset link to{'\n'}
+          <Text style={[styles.successTitle, { textAlign: getTextAlign('center') }]}>
+            {t('check_your_email')}
+          </Text>
+          <Text style={[styles.successMessage, { textAlign: getTextAlign('center') }]}>
+            {t('password_reset_link_sent')}{'\n'}
             <Text style={styles.emailText}>{email}</Text>
           </Text>
           <Button
-            title="Back to Sign In"
+            title={t('back_to_sign_in')}
             onPress={() => navigation.navigate('SignIn')}
             fullWidth
             size="large"
@@ -209,7 +215,9 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
         >
           <Icon name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Reset Password</Text>
+        <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+          {t('reset_password')}
+        </Text>
       </View>
 
       <View style={styles.content}>
@@ -219,9 +227,11 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           </View>
         </View>
 
-        <Text style={styles.title}>Forgot Password?</Text>
-        <Text style={styles.subtitle}>
-          Enter your email address and we'll send you a link to reset your password
+        <Text style={[styles.title, { textAlign: getTextAlign('center') }]}>
+          {t('forgot_password')}
+        </Text>
+        <Text style={[styles.subtitle, { textAlign: getTextAlign('center') }]}>
+          {t('forgot_password_description')}
         </Text>
 
         <View style={styles.form}>
@@ -232,7 +242,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
               setEmail(text);
               setError('');
             }}
-            placeholder="Enter your email"
+            placeholder={t('enter_email_placeholder')}
             keyboardType="email-address"
             autoCapitalize="none"
             leftIcon="email"
@@ -241,7 +251,7 @@ export const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({
           />
 
           <Button
-            title="Send Reset Link"
+            title={t('send_reset_link')}
             onPress={handleResetPassword}
             loading={isLoading}
             fullWidth

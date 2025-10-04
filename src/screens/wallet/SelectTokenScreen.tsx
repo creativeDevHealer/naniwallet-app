@@ -176,7 +176,7 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation, route }) => {
         <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>{isTopUpFlow ? 'Select Token to Top Up' : 'Select Token'}</Text>
+        <Text style={styles.title}>{'Select Token'}</Text>
         <View style={{ width: 32 }} />
       </View>
       <View style={styles.searchWrap}>

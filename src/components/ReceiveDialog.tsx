@@ -13,6 +13,7 @@ import {
 import { InteractionManager } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useWeb3Auth } from '../context/Web3AuthContext';
+import { useTranslation } from '../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NetworkToken } from '../services/tokenService';
 import TokenAddressService, { TokenAddressInfo } from '../services/tokenAddressService';
@@ -26,6 +27,7 @@ interface ReceiveDialogProps {
 
 export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, onClose }) => {
   const { theme } = useTheme();
+  const { t, isRTL, getTextAlign } = useTranslation();
   const { activeWallet, wallet, wallets } = useWeb3Auth();
   const [imageError, setImageError] = useState(false);
   const getTokenIconUrl = (idOrSymbol?: string | null) => {
@@ -92,9 +94,9 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
   const handleCopyAddress = async () => {
     try {
       await Clipboard.setString(address);
-      Alert.alert('Copied', 'Address copied to clipboard');
+      Alert.alert(t('copied'), t('address_copied'));
     } catch (error) {
-      Alert.alert('Error', 'Failed to copy address');
+      Alert.alert(t('error'), t('failed_to_copy_address'));
     }
   };
 
@@ -148,7 +150,7 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
       };
       await Share.share(shareContent);
     } catch (error) {
-      Alert.alert('Error', 'Failed to share');
+      Alert.alert(t('error'), t('failed_to_share'));
     }
   };
 
@@ -328,7 +330,9 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
             >
               <Icon name="arrow-back" size={24} color={theme.colors.text} />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Receive</Text>
+            <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+              {t('receive_money')}
+            </Text>
           </View>
 
           <View style={styles.tokenCard}>
@@ -397,19 +401,19 @@ export const ReceiveDialog: React.FC<ReceiveDialogProps> = ({ visible, token, on
             )}
           </View>
 
-          <Text style={styles.warningText}>
-            Only send <Text style={{ fontWeight: 'bold' }}>{token.symbol}</Text> Asset to this address{'\n'}
+          <Text style={[styles.warningText, { textAlign: getTextAlign('center') }]}>
+            {t('only_send_asset_to_address')} <Text style={{ fontWeight: 'bold' }}>{token.symbol}</Text> {t('asset_to_this_address')}{'\n'}
             <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-              Network: {addressInfo ? addressInfo.network : 'Unknown Network'}
+              {t('network')}: {addressInfo ? addressInfo.network : t('unknown_network')}
             </Text>
           </Text>
 
           <TouchableOpacity
             style={[styles.shareButton, !address && { opacity: 0.5 }]}
-            onPress={address ? handleShareQR : () => Alert.alert('No Address', 'No wallet address available to share')}
+            onPress={address ? handleShareQR : () => Alert.alert(t('no_address'), t('no_wallet_address_available'))}
             disabled={!address}
           >
-            <Text style={styles.shareButtonText}>Share QR Code</Text>
+            <Text style={styles.shareButtonText}>{t('share_qr_code')}</Text>
           </TouchableOpacity>
         </View>
       </View>

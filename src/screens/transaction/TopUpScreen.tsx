@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
+import { useTranslation } from '../../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import TokenAddressService from '../../services/tokenAddressService';
 import PaymentMethodService, { PaymentMethod } from '../../services/paymentMethodService';
@@ -35,6 +36,7 @@ interface FaucetInfo {
 
 export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) => {
   const { theme } = useTheme();
+  const { t, isRTL, getTextAlign } = useTranslation();
   const { wallet } = useWeb3Auth();
   const [selectedAddress, setSelectedAddress] = useState('');
   const [addressType, setAddressType] = useState('');
@@ -161,7 +163,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
 
   const handleCopyAddress = () => {
     Clipboard.setString(selectedAddress);
-    Alert.alert('Copied', 'Address copied to clipboard');
+    Alert.alert(t('copied'), t('address_copied'));
   };
 
   const handleOpenFaucet = async (url: string) => {
@@ -170,10 +172,10 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('Error', 'Cannot open this URL');
+        Alert.alert(t('error'), t('cannot_open_url'));
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to open faucet link');
+      Alert.alert(t('error'), t('failed_to_open_faucet_link'));
     }
   };
 
@@ -437,13 +439,15 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Top Up {token?.symbol || ''}</Text>
+        <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+          {t('top_up')} {token?.symbol || ''}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>💡 Testnet Tokens</Text>
+          <Text style={styles.infoTitle}>💡 {t('testnet_tokens')}</Text>
           <Text style={styles.infoText}>
             Testnet tokens have no real value and are used for testing purposes only. Use the faucets below to get free testnet tokens.
           </Text>
@@ -451,7 +455,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
 
         {selectedAddress ? (
           <View style={styles.addressCard}>
-            <Text style={styles.addressLabel}>Your {addressType} Address</Text>
+            <Text style={styles.addressLabel}>{t('your_address')}: {addressType}</Text>
             <View style={styles.addressContainer}>
               <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="middle">
                 {selectedAddress}
@@ -460,13 +464,13 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
                 <Icon name="content-copy" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            <Text style={styles.networkText}>Network: {addressType}</Text>
+            <Text style={styles.networkText}>{t('network')}: {addressType}</Text>
           </View>
         ) : null}
 
         {/* Payment Method Selection */}
         <View style={styles.paymentMethodCard}>
-          <Text style={styles.addressLabel}>Payment Method</Text>
+          <Text style={styles.addressLabel}>{t('payment_method')}</Text>
           <TouchableOpacity
             style={styles.paymentMethodSelector}
             onPress={() => setPaymentMethodSheetVisible(true)}
@@ -483,7 +487,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
                 <>
                   <Icon name="payment" size={20} color={theme.colors.textSecondary} />
                   <Text style={[styles.paymentMethodText, { color: theme.colors.textSecondary }]}>
-                    Select Payment Method
+                    {t('select_payment_method')}
                   </Text>
                 </>
               )}
@@ -492,7 +496,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Available Faucets</Text>
+        <Text style={styles.sectionTitle}>{t('available_faucets')}</Text>
 
         {faucets.length > 0 ? (
           faucets.map((faucet, index) => (
@@ -509,14 +513,14 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
                 style={styles.openButton}
                 onPress={() => handleOpenFaucet(faucet.url)}
               >
-                <Text style={styles.openButtonText}>Open Faucet</Text>
+                <Text style={styles.openButtonText}>{t('open_faucet')}</Text>
               </TouchableOpacity>
             </View>
           ))
         ) : (
           <View style={styles.emptyState}>
             <Icon name="water-drop" size={64} color={theme.colors.textSecondary} />
-            <Text style={styles.emptyText}>No faucets available for this token</Text>
+            <Text style={styles.emptyText}>{t('no_faucets_available_for_this_token')}</Text>
           </View>
         )}
       </ScrollView>
@@ -526,7 +530,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
         <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setPaymentMethodSheetVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.sheetContainer}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Payment Method</Text>
+              <Text style={styles.sheetTitle}>{t('select_payment_method')}</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setPaymentMethodSheetVisible(false)}>
                 <Icon name="close" size={22} color={theme.colors.text} />
               </TouchableOpacity>
@@ -535,7 +539,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
             {loadingPaymentMethods ? (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>Loading payment methods...</Text>
+                <Text style={{ color: theme.colors.textSecondary, marginTop: 8 }}>{t('loading_payment_methods')}</Text>
               </View>
             ) : paymentMethods.length > 0 ? (
               <FlatList
@@ -573,8 +577,8 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <Icon name="payment" size={48} color={theme.colors.textSecondary} />
                 <Text style={{ color: theme.colors.textSecondary, marginTop: 12, textAlign: 'center' }}>
-                  No payment methods available.{'\n'}
-                  Add payment methods in Settings to top up your wallet.
+                  {t('no_payment_methods_available')}.{'\n'}
+                  {t('add_payment_methods_in_settings_to_top_up_your_wallet')}
                 </Text>
                 <TouchableOpacity
                   style={styles.addPaymentButton}
@@ -583,7 +587,7 @@ export const TopUpScreen: React.FC<TopUpScreenProps> = ({ navigation, route }) =
                     navigation.navigate('PaymentMethods');
                   }}
                 >
-                  <Text style={styles.addPaymentButtonText}>Add Payment Method</Text>
+                  <Text style={styles.addPaymentButtonText}>{t('add_payment_method')}</Text>
                 </TouchableOpacity>
               </View>
             )}

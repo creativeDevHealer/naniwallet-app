@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
+import { t, useTranslation } from '../../i18n';
 import { useWeb3Auth } from '../../context/Web3AuthContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -36,6 +37,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
   const { theme } = useTheme();
   const { wallet, wallets, getWalletBalance, removeWallet } = useWeb3Auth();
   const { formatPrice, currencyInfo } = useCurrency();
+  const { locale } = useTranslation();
   const [balance, setBalance] = useState('0.0'); // Keep for legacy
   const [totalUSDValue, setTotalUSDValue] = useState(0); // New USD total
   const [networkLabel, setNetworkLabel] = useState('All Network');
@@ -875,8 +877,8 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
               <Icon name="arrow-back" size={24} color={theme.colors.white} />
             </TouchableOpacity>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>No Wallet Connected</Text>
-              <Text style={styles.headerSubtitle}>Please set up your wallet first</Text>
+              <Text style={styles.headerTitle}>{t('no_wallet_connected', locale)}</Text>
+              <Text style={styles.headerSubtitle}>{t('please_set_up_your_wallet_first', locale)}</Text>
             </View>
           </View>
         </View>
@@ -886,7 +888,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             onPress={() => navigation.navigate('WalletSetup')}
           >
             <Icon name="account-balance-wallet" size={24} color={theme.colors.primary} style={styles.menuIcon} />
-            <Text style={styles.menuText}>Set Up Wallet</Text>
+            <Text style={styles.menuText}>{t('set_up_wallet', locale)}</Text>
             <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} style={styles.menuArrow} />
           </TouchableOpacity>
         </View>
@@ -903,7 +905,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.headerTitle}>{wallet?.name || 'Wallet'}</Text>
+              <Text style={styles.headerTitle}>{wallet?.name || t('wallet', locale)}</Text>
               <TouchableOpacity style={[styles.headerIconBtn, styles.headerIconTight]} onPress={() => navigation.navigate('WalletSelect')}>
                 <Icon name="arrow-drop-down" size={20} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -949,7 +951,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           {(balanceLoading || tokenBalanceLoading || tokenPriceLoading) ? (
             <View style={styles.balanceLoadingContainer}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={styles.balanceLoadingText}>Loading...</Text>
+              <Text style={styles.balanceLoadingText}>{t('loading', locale)}</Text>
             </View>
           ) : (
             <Text style={styles.bigBalance}>
@@ -972,13 +974,13 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
         {/* Inline spinner removed; using full-screen overlay below */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={[styles.pillButton, styles.pillBordered]} onPress={handleSendMoney}>
-            <Text style={[styles.pillTextDark, { color: theme.colors.primary }]}>Send</Text>
+            <Text style={[styles.pillTextDark, { color: theme.colors.primary }]}>{t('send', locale)}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]} onPress={handleReceiveMoney}>
-            <Text style={styles.pillTextLight}>Receive</Text>
+            <Text style={styles.pillTextLight}>{t('receive', locale)}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]} onPress={() => navigation.navigate('SelectToken', { action: 'topup' })}>
-            <Text style={styles.pillTextLight}>Top Up</Text>
+            <Text style={styles.pillTextLight}>{t('top_up', locale)}</Text>
           </TouchableOpacity>
         </View>
         
@@ -986,10 +988,10 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       <View style={styles.tabsRow}>
         <TouchableOpacity onPress={() => setActiveTab('tokens')}>
-          <Text style={[styles.tabText, activeTab === 'tokens' && styles.tabTextActive]}>Token</Text>
+          <Text style={[styles.tabText, activeTab === 'tokens' && styles.tabTextActive]}>{t('token', locale)}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setActiveTab('nfts')}>
-          <Text style={[styles.tabText, activeTab === 'nfts' && styles.tabTextActive]}>NFTs</Text>
+          <Text style={[styles.tabText, activeTab === 'nfts' && styles.tabTextActive]}>{t('nfts', locale)}</Text>
         </TouchableOpacity>
       </View>
 
@@ -997,7 +999,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
         <>
           <View style={styles.hideRowWrap}>
             <View style={styles.hideSmallRow}>
-              <Text style={{ color: theme.colors.text }}>Hide Small Asset</Text>
+              <Text style={{ color: theme.colors.text }}>{t('hide_small_asset', locale)}</Text>
               <TouchableOpacity onPress={() => setHideSmallAssets(v => !v)}>
                 <Icon name={hideSmallAssets ? 'toggle-on' : 'toggle-off'} size={38} color={hideSmallAssets ? theme.colors.primary : theme.colors.border} />
               </TouchableOpacity>
@@ -1078,7 +1080,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       {activeTab === 'nfts' && (
         <View style={styles.emptyNfts}>
           <Icon name="receipt-long" size={96} color={theme.colors.textSecondary + '66'} />
-          <Text style={styles.emptyText}>There's nothing here</Text>
+          <Text style={styles.emptyText}>{t('there_s_nothing_here', locale)}</Text>
         </View>
       )}
 
@@ -1101,7 +1103,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
         <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setNetworkSheetVisible(false)}>
           <TouchableOpacity activeOpacity={1} style={styles.sheetContainer}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Select Chain</Text>
+              <Text style={styles.sheetTitle}>{t('select_chain', locale)}</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setNetworkSheetVisible(false)}>
                 <Icon name="close" size={22} color={theme.colors.text} />
               </TouchableOpacity>
@@ -1134,7 +1136,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           <TouchableOpacity activeOpacity={1} style={styles.actionMenuContainer}>
             <View style={styles.actionMenuHeader}>
               <Text style={styles.actionMenuTitle}>
-                {selectedTokenForAction?.symbol} Actions
+                {selectedTokenForAction?.symbol} {t('actions', locale)}
               </Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setActionMenuVisible(false)}>
                 <Icon name="close" size={22} color={theme.colors.text} />
@@ -1146,7 +1148,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
               onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'send')}
             >
               <Icon name="send" size={24} color={theme.colors.primary} />
-              <Text style={styles.actionMenuItemText}>Send</Text>
+              <Text style={styles.actionMenuItemText}>{t('send', locale)}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1154,7 +1156,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
               onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'topup')}
             >
               <Icon name="add-circle" size={24} color={theme.colors.success} />
-              <Text style={styles.actionMenuItemText}>Top Up</Text>
+              <Text style={styles.actionMenuItemText}>{t('top_up', locale)}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1162,7 +1164,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
               onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'receive')}
             >
               <Icon name="call-received" size={24} color={theme.colors.accent} />
-              <Text style={styles.actionMenuItemText}>Receive</Text>
+              <Text style={styles.actionMenuItemText}>{t('receive', locale)}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>

@@ -12,6 +12,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from '../../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 // BackendOTPService is now handled through AuthContext
 
@@ -34,6 +35,7 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
   route,
 }) => {
   const { theme } = useTheme();
+  const { t, isRTL, getTextAlign } = useTranslation();
   const { verifyOTPAndCreateAccount, resendOTP } = useAuth();
   const { email } = route.params;
   
@@ -75,7 +77,7 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
   const handleVerifyCode = async () => {
     const otpCode = code.join('');
     if (otpCode.length !== 6) {
-      Alert.alert('Invalid Code', 'Please enter a valid 6-digit code');
+      Alert.alert(t('invalid_code'), t('invalid_code_message'));
       return;
     }
 
@@ -104,7 +106,7 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
         });
       }
     } catch (error: any) {
-      Alert.alert('Verification Failed', error.message || 'Please try again.');
+      Alert.alert(t('verification_failed'), error.message || t('please_try_again'));
       
       // If it's an attempts error, clear the form
       if (error.message.includes('Maximum attempts exceeded')) {
@@ -125,9 +127,9 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
       
       setTimer(30);
       setCanResend(false);
-      Alert.alert('Code Sent', `A new verification code has been sent to ${email}`);
+      Alert.alert(t('code_sent'), `${t('code_sent_message')} ${email}`);
     } catch (error: any) {
-      Alert.alert('Failed to Resend', error.message || 'Please try again.');
+      Alert.alert(t('failed_resend'), error.message || t('please_try_again'));
     }
   };
 
@@ -317,13 +319,17 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
               >
                 <Icon name="arrow-back" size={24} color={theme.colors.text} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Verify Your Email</Text>
+              <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+                {t('verify_your_email')}
+              </Text>
             </View>
 
             <View style={styles.content}>
-              <Text style={styles.title}>Enter Your{'\n'}Verification Code</Text>
-              <Text style={styles.subtitle}>
-                Enter the OTP code that we have sent to your email{' '}
+              <Text style={[styles.title, { textAlign: getTextAlign('center') }]}>
+                {t('enter_verification_code')}
+              </Text>
+              <Text style={[styles.subtitle, { textAlign: getTextAlign('center') }]}>
+                {t('otp_sent_to_email')}{' '}
                 <Text style={styles.email}>{formatEmail(email)}</Text>
               </Text>
 
@@ -361,7 +367,7 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
               >
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
-                    <Text style={styles.verifyButtonText}>Verifying...</Text>
+                    <Text style={styles.verifyButtonText}>{t('verifying')}</Text>
                   </View>
                 ) : (
                   <Text style={[
@@ -375,17 +381,19 @@ export const EmailOTPVerificationScreen: React.FC<EmailOTPVerificationScreenProp
 
               {timer > 0 ? (
                 <View style={styles.timerContainer}>
-                  <Text style={styles.timerText}>Resend OTP in</Text>
+                  <Text style={styles.timerText}>{t('resend_otp_in')}</Text>
                   <Text style={styles.timerValue}>00:{timer.toString().padStart(2, '0')}</Text>
                 </View>
               ) : (
                 <View style={styles.resendContainer}>
-                  <Text style={styles.resendText}>Didn't receive the code?</Text>
+                  <Text style={[styles.resendText, { textAlign: getTextAlign('center') }]}>
+                    {t('didnt_receive_code')}
+                  </Text>
                   <TouchableOpacity
                     style={styles.resendButton}
                     onPress={handleResendCode}
                   >
-                    <Text style={styles.resendButtonText}>Resend Code</Text>
+                    <Text style={styles.resendButtonText}>{t('resend_code')}</Text>
                   </TouchableOpacity>
                 </View>
               )}

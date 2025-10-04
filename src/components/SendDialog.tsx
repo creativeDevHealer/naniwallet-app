@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useWeb3Auth } from '../context/Web3AuthContext';
+import { useTranslation } from '../i18n';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { NetworkToken } from '../services/tokenService';
 import TransactionService from '../services/transactionService';
@@ -36,6 +37,7 @@ interface SendDialogProps {
 
 export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose }) => {
   const { theme } = useTheme();
+  const { t, isRTL, getTextAlign } = useTranslation();
   const { activeWallet, wallet, wallets } = useWeb3Auth();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -165,27 +167,27 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
 
   const handleSend = async () => {
     if (!wallet) {
-      Alert.alert('Error', 'No wallet connected');
+      Alert.alert(t('error'), t('no_wallet_connected'));
       return;
     }
 
     if (!recipientAddress.trim()) {
-      Alert.alert('Error', 'Please enter recipient address');
+      Alert.alert(t('error'), t('please_enter_recipient_address'));
       return;
     }
 
     if (!amount.trim() || parseFloat(amount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
+      Alert.alert(t('error'), t('please_enter_valid_amount'));
       return;
     }
 
     if (parseFloat(amount) > parseFloat(balance)) {
-      Alert.alert('Error', 'Insufficient balance');
+      Alert.alert(t('error'), t('insufficient_balance'));
       return;
     }
 
     if (!wallet.mnemonic) {
-      Alert.alert('Error', 'Wallet mnemonic not available');
+      Alert.alert(t('error'), t('wallet_mnemonic_not_available'));
       return;
     }
 
@@ -229,7 +231,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
           }
         } 
         Alert.alert(
-          'Transaction Sent',
+          t('transaction_sent'),
           `Successfully sent ${amount} ${token?.symbol}\n\nTransaction Hash:\n${result.txHash?.slice(0, 20)}...${result.txHash?.slice(-20)}`,
           [
             {
@@ -247,11 +249,11 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
         // If we stored a pending transaction and it failed, we should update its status
         // For now, we'll just log the failure
         console.error('❌ Transaction failed:', result.error);
-        Alert.alert('Transaction Failed', result.error || 'Unknown error occurred');
+        Alert.alert(t('transaction_failed'), result.error || t('unknown_error_occurred'));
       }
     } catch (error: any) {
       console.error('Error sending transaction:', error);
-      Alert.alert('Error', error.message || 'Failed to send transaction. Please try again.');
+      Alert.alert(t('error'), error.message || t('failed_to_send_transaction'));
     } finally {
       setLoading(false);
     }
@@ -497,7 +499,9 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
             <View style={styles.handleBar} />
             
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Send {token?.symbol || 'Token'}</Text>
+              <Text style={[styles.headerTitle, { textAlign: getTextAlign('center') }]}>
+                {t('send_money')} {token?.symbol || t('token')}
+              </Text>
               <TouchableOpacity 
                 style={styles.closeButton} 
                 onPress={onClose}
@@ -544,7 +548,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                   <Text style={styles.tokenName}>{token.name || 'Unknown Token'}</Text>
                 </View>
                 <View style={styles.balanceInfo}>
-                  <Text style={styles.balanceLabel}>Available</Text>
+                  <Text style={styles.balanceLabel}>{t('available_balance')}</Text>
                   {loadingBalance ? (
                     <ActivityIndicator size="small" color={theme.colors.primary} />
                   ) : (
@@ -554,7 +558,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Recipient Address</Text>
+                <Text style={styles.inputLabel}>{t('recipient_address')}</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -572,7 +576,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Amount</Text>
+                <Text style={styles.inputLabel}>{t('amount')}</Text>
                 <View style={styles.amountContainer}>
                   <TextInput
                     style={[
@@ -592,7 +596,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                     onPress={handleMaxAmount}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.maxButtonText}>MAX</Text>
+                    <Text style={styles.maxButtonText}>{t('max')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -616,10 +620,10 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
                   {loading ? (
                     <>
                       <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                      Sending...
+                      {t('sending')}
                     </>
                   ) : (
-                    `Send ${token.symbol || 'Token'}`
+                    `${t('send')} ${token.symbol || t('token')}`
                   )}
                 </Text>
               </TouchableOpacity>
