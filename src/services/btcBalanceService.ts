@@ -96,11 +96,7 @@ export default class BTCBalanceService {
         throw new Error('Rate limited - skipping to fallback');
       }
       
-      const response = await this.fetchWithTimeout(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}/balance`, 7000, {
-        headers: {
-          'Authorization': 'Bearer 924fe42b41d74c378c9311a3c620336d',
-        }
-      });
+      const response = await this.fetchWithTimeout(`https://api.blockcypher.com/v1/btc/test3/addrs/${address}/balance/?token=924fe42b41d74c378c9311a3c620336d`, 7000);
       if (!response.ok) {
         // Handle rate limit gracefully with exponential backoff
         if (response.status === 429) {
@@ -200,11 +196,7 @@ export default class BTCBalanceService {
   private async fetchMainnetBalance(address: string): Promise<BTCBalanceInfo> {
     try {
       // Using BlockCypher API for mainnet
-      const response = await fetch(`https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance`, {
-        headers: {
-          'Authorization': 'Bearer 924fe42b41d74c378c9311a3c620336d',
-        }
-      });
+      const response = await fetch(`https://api.blockcypher.com/v1/btc/main/addrs/${address}/balance/?token=924fe42b41d74c378c9311a3c620336d`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);

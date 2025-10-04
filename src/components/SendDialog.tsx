@@ -24,6 +24,7 @@ import TokenAddressService from '../services/tokenAddressService';
 import BTCBalanceService from '../services/btcBalanceService';
 import ETHBalanceService from '../services/ethBalanceService';
 import SOLBalanceService from '../services/solBalanceService';
+import BackendTransactionService from '../services/backendTransactionService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -79,7 +80,7 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
         const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
         if (addressInfo?.address) {
           const solService = SOLBalanceService.getInstance();
-          const balanceInfo = await solService.getBalance(addressInfo.address, 'devnet');
+          const balanceInfo = await solService.getSOLBalance(addressInfo.address, 'devnet');
           setBalance(balanceInfo.balance.toFixed(6));
         }
       }
@@ -100,6 +101,66 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
       sol: 'https://assets.coingecko.com/coins/images/4128/large/solana.png',
     };
     return map[key];
+  };
+
+  const getTokenUSDPrice = (symbol: string): number => {
+    // Rough USD prices for demo purposes - in production, you'd fetch real-time prices
+    const prices: Record<string, number> = {
+      'BTC': 65000,
+      'ETH': 4000,
+      'SOL': 200,
+    };
+    return prices[symbol.toUpperCase()] || 1;
+  };
+
+  const getNetworkName = (symbol: string): string => {
+    const networks: Record<string, string> = {
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'SOL': 'solana',
+    };
+    return networks[symbol.toUpperCase()] || 'unknown';
+  };
+
+  const getTokenAddress = async (tokenSymbol: string): Promise<string> => {
+    if (!wallet) return '';
+    
+    const symbol = tokenSymbol.toUpperCase();
+    
+    if (symbol === 'ETH') {
+      return wallet.address; // ETH address is the main wallet address
+    } else if (symbol === 'BTC') {
+      // Get BTC address
+      const addressService = TokenAddressService.getInstance();
+      const addressInfo = await addressService.getTokenAddressInfo(
+        { symbol: 'BTC', network: 'bitcoin' } as any, 
+        wallet.mnemonic
+      );
+      return addressInfo?.address || '';
+    } else if (symbol === 'SOL') {
+      // Get SOL address
+      const addressService = TokenAddressService.getInstance();
+      const addressInfo = await addressService.getTokenAddressInfo(
+        { symbol: 'SOL', network: 'solana' } as any, 
+        wallet.mnemonic
+      );
+      return addressInfo?.address || '';
+    }
+    
+    return wallet.address; // Fallback to ETH address
+  };
+
+  const storeTransactionHistory = async (transactionData: any) => {
+
+    console.log(transactionData);
+    const backendService = BackendTransactionService.getInstance();
+    const result = await backendService.storeTransactionHistory(transactionData);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to store transaction history');
+    }
+    
+    return result;
   };
 
   const handleSend = async () => {
@@ -139,7 +200,34 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
         amount
       );
 
-      if (result.success) {
+      if (result.success && result.txHash) {
+        // Update transaction status to confirmed if we stored a pending transaction
+        if (result.txHash) {
+          try {
+            // Get the correct address for this token/network
+            const tokenAddress = await getTokenAddress(token?.symbol || '');
+            
+            // Note: In a real implementation, you'd need to update the existing transaction
+            // For now, we'll store a new confirmed transaction
+            // console.log(tokenAddress);
+            await storeTransactionHistory({
+              txHash: result.txHash,
+              toAddress: recipientAddress,
+              senderAddress: tokenAddress, // Use the correct address for the token
+              amountUSD: parseFloat(amount) * getTokenUSDPrice(token?.symbol || ''),
+              type: 'transfer',
+              token: token?.symbol || '',
+              network: getNetworkName(token?.symbol || ''),
+              status: 'confirmed',
+              timestamp: new Date().toISOString(),
+              amount: amount,
+              currency: token?.symbol || '',
+            });
+          } catch (storeError) {
+            console.error('❌ Failed to store confirmed transaction history:', storeError);
+            // Don't fail the transaction if storage fails
+          }
+        } 
         Alert.alert(
           'Transaction Sent',
           `Successfully sent ${amount} ${token?.symbol}\n\nTransaction Hash:\n${result.txHash?.slice(0, 20)}...${result.txHash?.slice(-20)}`,
@@ -156,6 +244,9 @@ export const SendDialog: React.FC<SendDialogProps> = ({ visible, token, onClose 
           ]
         );
       } else {
+        // If we stored a pending transaction and it failed, we should update its status
+        // For now, we'll just log the failure
+        console.error('❌ Transaction failed:', result.error);
         Alert.alert('Transaction Failed', result.error || 'Unknown error occurred');
       }
     } catch (error: any) {
