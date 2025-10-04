@@ -35,9 +35,9 @@ interface WalletDashboardScreenProps {
 export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ navigation }) => {
   const { theme } = useTheme();
   const { wallet, wallets, getWalletBalance, removeWallet } = useWeb3Auth();
-  const { selectedCurrency, formatAmount, convertAmount, refreshRates, isLoading: ratesLoading, error: ratesError, lastUpdated } = useCurrency();
-  const [balance, setBalance] = useState('0.0');
-  const [totalPortfolioValue, setTotalPortfolioValue] = useState(0);
+  const { formatPrice, currencyInfo } = useCurrency();
+  const [balance, setBalance] = useState('0.0'); // Keep for legacy
+  const [totalUSDValue, setTotalUSDValue] = useState(0); // New USD total
   const [networkLabel, setNetworkLabel] = useState('All Network');
   const [networkSheetVisible, setNetworkSheetVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,31 +47,53 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
   const [selectedTokens, setSelectedTokens] = useState<NetworkToken[]>([]);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [hasSelection, setHasSelection] = useState<boolean>(false);
+  const [actionMenuVisible, setActionMenuVisible] = useState(false);
+  const [selectedTokenForAction, setSelectedTokenForAction] = useState<NetworkToken | null>(null);
 
   useEffect(() => {
     setHasSelection(selectedTokens.length > 0);
   }, [selectedTokens]);
 
-  // Recalculate total portfolio value when tokens, balances, or currency changes
+  // Load hide balance setting from AsyncStorage
   useEffect(() => {
-    calculateTotalPortfolioValue();
-  }, [selectedTokens, balances, selectedCurrency]);
+    const loadHideBalanceSetting = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('pref_hide_balances');
+        setIsBalanceHidden(saved === 'true');
+      } catch (error) {
+        console.error('Failed to load hide balance setting:', error);
+      }
+    };
+    loadHideBalanceSetting();
+  }, []);
 
-  // Force re-render when currency changes to update token values
+  // Reload hide balance setting and refresh balances when screen comes into focus
   useEffect(() => {
-    console.log(`🔄 Currency changed to: ${selectedCurrency}`);
-    // Force a re-render by updating a dummy state
-    setTotalPortfolioValue(prev => prev + 0.000001);
-  }, [selectedCurrency]);
+    const unsubscribe = navigation.addListener('focus', async () => {
+      try {
+        const saved = await AsyncStorage.getItem('pref_hide_balances');
+        setIsBalanceHidden(saved === 'true');
+        
+        // Also refresh balances when screen comes into focus to ensure fresh data
+        if (wallet) {
+          console.log('🔄 Screen focused, refreshing balances for wallet:', wallet.address);
+          loadWalletBalance();
+          loadTokenBalances();
+        }
+      } catch (error) {
+        console.error('Failed to reload settings and balances:', error);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, wallet]);
   const [toastMessage, setToastMessage] = useState('');
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const [chains, setChains] = useState<NetworkChain[]>([]);
   const [chainsLoading, setChainsLoading] = useState<boolean>(false);
   const [balanceLoading, setBalanceLoading] = useState<boolean>(false);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const lastScrollYRef = useRef(0);
-  const lastAutoRefreshTsRef = useRef(0);
+  const [tokenBalanceLoading, setTokenBalanceLoading] = useState<boolean>(false);
+  const [tokenPriceLoading, setTokenPriceLoading] = useState<boolean>(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -80,61 +102,6 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       Animated.delay(1400),
       Animated.timing(toastOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setToastMessage(''));
-  };
-
-  const handleInitialLoad = async () => {
-    if (!wallet) {
-      setInitialLoading(false);
-      return;
-    }
-
-    console.log('🔄 Starting initial load sequence...');
-    setInitialLoading(true);
-    setBalanceError(null);
-
-    // Set a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.warn('⚠️ Initial load timeout, forcing completion');
-      setInitialLoading(false);
-    }, 10000); // 10 second timeout
-
-    try {
-      // Load all components in parallel for faster loading
-      await Promise.all([
-        loadWalletBalance(),
-        loadSelectedTokensAndRefresh(),
-        // FX rates are loaded automatically by CurrencyContext
-      ]);
-      
-      console.log('✅ Initial load completed');
-    } catch (error) {
-      console.error('❌ Initial load failed:', error);
-      setBalanceError('Failed to load wallet data. Please try again.');
-    } finally {
-      clearTimeout(timeoutId);
-      setInitialLoading(false);
-    }
-  };
-
-  const calculateTotalPortfolioValue = () => {
-    let total = 0;
-    
-    // Sum up all token balances converted to USD first, then to selected currency
-    selectedTokens.forEach(token => {
-      const tokenBalance = balances[token.id] || 0;
-      const tokenValueInUSD = tokenBalance * (token.priceUSDT || 0);
-      
-      // Convert from USD to selected currency
-      if (selectedCurrency === 'USD') {
-        total += tokenValueInUSD;
-      } else if (selectedCurrency === 'GBP') {
-        total += convertAmount(tokenValueInUSD, 'USD', 'GBP');
-      } else if (selectedCurrency === 'SOS') {
-        total += convertAmount(tokenValueInUSD, 'USD', 'SOS');
-      }
-    });
-    
-    setTotalPortfolioValue(total);
   };
 
   const loadSelectedTokens = async () => {
@@ -171,7 +138,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           if (s === 'sol' || s === 'solana') return 'SOL';
           return s.toUpperCase();
         };
-        const desiredSymbols = Array.from(new Set(list.map(toSymbol))).filter(s => ['BTC','ETH','SOL'].includes(s));
+        const desiredSymbols = Array.from(new Set(list.map((v: string) => toSymbol(v)))).filter(s => ['BTC','ETH','SOL'].includes(s));
         if (desiredSymbols.length === 0) {
           setSelectedTokens([]);
           setHasSelection(false);
@@ -236,6 +203,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
   const loadSelectedTokensAndRefresh = async () => {
     try {
+      setTokenPriceLoading(true);
       const ids = await AsyncStorage.getItem('selected_token_ids');
       if (ids) {
         // Sanitize and normalize the saved selection
@@ -267,7 +235,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             if (s === 'sol' || s === 'solana') return 'SOL';
             return s.toUpperCase();
           };
-          const desiredSymbols = Array.from(new Set(list.map(toSymbol))).filter(s => ['BTC','ETH','SOL'].includes(s));
+          const desiredSymbols = Array.from(new Set(list.map((v: string) => toSymbol(v)))).filter(s => ['BTC','ETH','SOL'].includes(s));
           
           // Create token objects with fresh market data
           const defaultsBySymbol: Record<string, NetworkToken> = {
@@ -325,74 +293,37 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       console.error('Failed to load tokens with fresh data:', error);
       // Fallback to original method
       await loadSelectedTokens();
+    } finally {
+      setTokenPriceLoading(false);
     }
   };
 
-  useEffect(() => { 
-    loadSelectedTokens(); 
-  }, []);
+  useEffect(() => { loadSelectedTokens(); }, []);
 
-  // Handle initial load when component mounts
-  useEffect(() => {
-    if (wallet && initialLoading) {
-      handleInitialLoad();
-    }
-  }, [wallet]);
+  // No automatic refresh on screen focus - balances load once when wallet changes
 
-  // Load hide balance preference on mount
-  useEffect(() => {
-    const loadHideBalancePreference = async () => {
-      try {
-        const saved = await AsyncStorage.getItem('pref_hide_balances');
-        setIsBalanceHidden(saved === 'true');
-      } catch (error) {
-        console.error('Failed to load hide balance preference:', error);
-      }
-    };
-    loadHideBalancePreference();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', async () => {
-      if (wallet) {
-        console.log('🔄 Screen focused, refreshing hide balance preference only...');
-        
-        // Only refresh hide balance preference, don't reload data
-        try {
-          const saved = await AsyncStorage.getItem('pref_hide_balances');
-          setIsBalanceHidden(saved === 'true');
-        } catch (error) {
-          console.error('Failed to refresh hide balance preference:', error);
-        }
-      }
-    });
-    return unsubscribe;
-  }, [navigation, wallet]);
+  // No automatic background refresh - only manual refresh by user
+  // Balances are loaded once when wallet changes and tokens are selected
+  // User can manually refresh using the refresh button
 
   useEffect(() => {
     if (wallet) {
-      console.log(`🔄 Wallet changed to: ${wallet.address}`);
-      // Clear balances first to show loading state
-      setBalance('0.0');
-      setBalances({});
-      // Start initial loading sequence
-      handleInitialLoad();
+      console.log(`🔄 Wallet changed to: ${wallet.address} (ID: ${wallet.id})`);
+      console.log(`🔄 Wallet name: ${wallet.name}`);
+      // Load fresh token prices and balances when wallet changes
+      loadSelectedTokensAndRefresh();
+      loadWalletBalance();
     } else {
       console.log('🔄 No wallet selected');
       setBalance('0.0');
       setBalances({});
-      setInitialLoading(false);
     }
   }, [wallet]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (wallet && selectedTokens.length > 0) {
-      console.log(`🔄 Selected tokens changed, loading balances for: ${wallet.address}`);
+      console.log(`🔄 Selected tokens changed, loading balances silently for: ${wallet.address}`);
       loadTokenBalances();
-    } else if (wallet && selectedTokens.length === 0) {
-      // If no tokens are selected, load default tokens (BTC, ETH, SOL) automatically
-      console.log(`🔄 No tokens selected, loading default tokens for: ${wallet.address}`);
-      loadDefaultTokens();
     } else {
       setBalances({});
     }
@@ -436,21 +367,19 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
   const loadWalletBalance = async () => {
     try {
       setBalanceLoading(true);
-      setBalanceError(null);
-      
       // Skip fetching if wallet is not connected
       if (!wallet) {
         console.log('No wallet connected, setting balance to 0');
         setBalance('0.0');
-        setBalanceError(null);
         return;
       }
       
-      console.log(`🔄 Loading balance for wallet: ${wallet.address}`);
+      console.log(`🔄 Loading balance for wallet: ${wallet.address} (${wallet.name})`);
       
       // Clear cache for this wallet to ensure fresh data
       const ethService = ETHBalanceService.getInstance();
       ethService.clearCache();
+      console.log(`🧹 Cleared ETH balance cache for wallet: ${wallet.address}`);
       
       // Try to get ETH balance first (since this is primarily an ETH wallet)
       try {
@@ -459,107 +388,17 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
         setBalance(formattedBalance);
         console.log(`✅ Main wallet ETH balance: ${formattedBalance} ETH for ${wallet.address}`);
       } catch (ethError) {
-        console.warn('⚠️ Failed to get ETH balance, falling back to default:', ethError);
+        console.warn('❌ Failed to get ETH balance, falling back to default:', ethError);
         // Fallback to the original wallet balance method
-        try {
-          const walletBalance = await getWalletBalance();
-          setBalance(walletBalance);
-          console.log(`✅ Fallback wallet balance: ${walletBalance}`);
-        } catch (fallbackError) {
-          console.error('❌ Both ETH and fallback balance failed:', fallbackError);
-          setBalance('0.0');
-          setBalanceError('Failed to load balance. Check your connection.');
-        }
+        const walletBalance = await getWalletBalance();
+        setBalance(walletBalance);
+        console.log(`⚠️ Using fallback balance: ${walletBalance}`);
       }
     } catch (error) {
       console.error('❌ Failed to load balance:', error);
       setBalance('0.0');
-      setBalanceError('Network error. Please try again.');
     } finally {
       setBalanceLoading(false);
-    }
-  };
-
-  const loadDefaultTokens = async () => {
-    try {
-      if (!wallet) {
-        console.log('No wallet available for default tokens');
-        return;
-      }
-
-      console.log(`Loading default tokens (BTC, ETH, SOL) for wallet: ${wallet.address}`);
-
-      // Create default tokens with fresh market data
-      const defaultTokenIds = ['bitcoin', 'ethereum', 'solana'];
-      const freshMarketData = await TokenService.fetchTokensByIds(defaultTokenIds);
-      
-      const defaultTokens: NetworkToken[] = [
-        { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', priceUSDT: 0, changePct24h: 0, color: '#F7931A', iconUrl: 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png' },
-        { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', priceUSDT: 0, changePct24h: 0, color: '#627EEA', iconUrl: 'https://assets.coingecko.com/coins/images/279/large/ethereum.png' },
-        { id: 'solana', symbol: 'SOL', name: 'Solana', priceUSDT: 0, changePct24h: 0, color: '#9945FF', iconUrl: 'https://assets.coingecko.com/coins/images/4128/large/solana.png' },
-      ];
-
-      // Update with fresh market data if available
-      if (freshMarketData && freshMarketData.length > 0) {
-        for (const fresh of freshMarketData) {
-          const symbol = fresh.symbol.toUpperCase();
-          const defaultToken = defaultTokens.find(t => t.symbol === symbol);
-          if (defaultToken) {
-            defaultToken.priceUSDT = fresh.priceUSDT;
-            defaultToken.changePct24h = fresh.changePct24h;
-            defaultToken.iconUrl = fresh.iconUrl || defaultToken.iconUrl;
-          }
-        }
-      }
-
-      // Set default tokens
-      setSelectedTokens(defaultTokens);
-      setHasSelection(true);
-
-      // Load balances for default tokens
-      const newBalances: Record<string, number> = {};
-      const btcService = BTCBalanceService.getInstance();
-      const ethService = ETHBalanceService.getInstance();
-      const solService = SOLBalanceService.getInstance();
-      const addressService = TokenAddressService.getInstance();
-
-      for (const token of defaultTokens) {
-        try {
-          if (token.symbol.toUpperCase() === 'BTC') {
-            const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
-            if (addressInfo?.address) {
-              const btcBalance = await btcService.getBTCBalance(addressInfo.address, true);
-              newBalances[token.id] = btcBalance.balance;
-              console.log(`✅ BTC Balance for ${addressInfo.address}: ${btcBalance.balance} BTC`);
-            } else {
-              newBalances[token.id] = 0;
-              console.log(`❌ No BTC address found for wallet`);
-            }
-          } else if (token.symbol.toUpperCase() === 'ETH') {
-            const ethBalance = await ethService.getETHBalance(wallet.address, 'sepolia');
-            newBalances[token.id] = ethBalance.balance;
-            console.log(`✅ ETH Balance for ${wallet.address}: ${ethBalance.balance} ETH`);
-          } else if (token.symbol.toUpperCase() === 'SOL') {
-            const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
-            if (addressInfo?.address) {
-              const solBalance = await solService.getBalance(addressInfo.address, 'devnet');
-              newBalances[token.id] = solBalance.balance;
-              console.log(`✅ SOL Balance for ${addressInfo.address}: ${solBalance.balance} SOL`);
-            } else {
-              newBalances[token.id] = 0;
-              console.log(`❌ No SOL address found for wallet`);
-            }
-          }
-        } catch (error) {
-          console.error(`❌ Failed to load balance for ${token.symbol}:`, error);
-          newBalances[token.id] = 0;
-        }
-      }
-
-      console.log(`Final default token balances:`, newBalances);
-      setBalances(newBalances);
-    } catch (error) {
-      console.error('❌ Failed to load default tokens:', error);
     }
   };
 
@@ -568,17 +407,27 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       if (!wallet || !selectedTokens.length) {
         console.log('No wallet or tokens selected, clearing balances');
         setBalances({});
+        setTotalUSDValue(0);
+        setTokenBalanceLoading(false);
         return;
       }
 
-      console.log(`Loading token balances for wallet: ${wallet.address}`);
-      console.log(`Selected tokens:`, selectedTokens.map(t => t.symbol));
+      setTokenBalanceLoading(true);
+
+      console.log(`🔄 Loading token balances for wallet: ${wallet.address} (${wallet.name})`);
+      console.log(`🔄 Selected tokens:`, selectedTokens.map(t => t.symbol));
 
       const newBalances: Record<string, number> = {};
       const btcService = BTCBalanceService.getInstance();
       const ethService = ETHBalanceService.getInstance();
       const solService = SOLBalanceService.getInstance();
       const addressService = TokenAddressService.getInstance();
+
+      // Clear caches to ensure fresh data
+      ethService.clearCache();
+      btcService.clearCache();
+      solService.clearCache();
+      console.log(`🧹 Cleared all balance service caches for wallet: ${wallet.address}`);
 
       // Load balances for each selected token
       for (const token of selectedTokens) {
@@ -603,7 +452,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             // Get SOL address from mnemonic
             const addressInfo = await addressService.getTokenAddressInfo(token, wallet.mnemonic);
             if (addressInfo?.address) {
-              const solBalance = await solService.getBalance(addressInfo.address, 'devnet');
+              const solBalance = await solService.getSOLBalance(addressInfo.address, 'devnet');
               newBalances[token.id] = solBalance.balance;
               console.log(`✅ SOL Balance for ${addressInfo.address}: ${solBalance.balance} SOL`);
             } else {
@@ -623,62 +472,44 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       console.log(`Final token balances:`, newBalances);
       setBalances(newBalances);
+
+      // Calculate total USD value
+      calculateTotalUSDValue(newBalances, selectedTokens);
     } catch (error) {
       console.error('❌ Failed to load token balances:', error);
       setBalances({});
+      setTotalUSDValue(0);
+    } finally {
+      setTokenBalanceLoading(false);
     }
+  };
+
+  const calculateTotalUSDValue = (balances: Record<string, number>, tokens: NetworkToken[]) => {
+    let total = 0;
+    
+    for (const token of tokens) {
+      const balance = balances[token.id] || 0;
+      const price = token.priceUSDT || 0;
+      const usdValue = balance * price;
+      total += usdValue;
+      console.log(`💰 ${token.symbol}: ${balance} * $${price} = $${usdValue.toFixed(2)}`);
+    }
+    
+    console.log(`💰 Total USD Value: $${total.toFixed(2)}`);
+    setTotalUSDValue(total);
   };
 
   const onRefresh = async () => {
-    if (initialLoading) {
-      console.log('⏳ Initial loading in progress, skipping manual refresh');
-      return;
-    }
-    
     setRefreshing(true);
-    console.log('🔄 Manual refresh triggered - clearing caches and fetching fresh data');
-    
-    try {
-      // Clear all service caches to force fresh data fetch
-      const btcService = BTCBalanceService.getInstance();
-      const ethService = ETHBalanceService.getInstance();
-      const solService = SOLBalanceService.getInstance();
-      
-      btcService.clearCache();
-      ethService.clearCache();
-      solService.clearCache();
-      
-      console.log('🗑️ Cleared all balance service caches');
-      
-      await Promise.all([
-        loadWalletBalance(),
-        loadTokenBalances(),
-        refreshMarketData(),
-        refreshRates() // Refresh FX rates
-      ]);
-      console.log('✅ Manual refresh completed with fresh data');
-    } catch (error) {
-      console.error('❌ Manual refresh failed:', error);
-      showToast('Refresh failed. Please try again.');
-    } finally {
-      setRefreshing(false);
-    }
+    await Promise.all([
+      loadWalletBalance(),
+      loadTokenBalances(),
+      refreshMarketData()
+    ]);
+    setRefreshing(false);
   };
 
-  const handleScroll = (e: any) => {
-    try {
-      const y = e?.nativeEvent?.contentOffset?.y || 0;
-      const dy = y - lastScrollYRef.current;
-      lastScrollYRef.current = y;
-      const now = Date.now();
-      // Trigger a lightweight refresh when user scrolls downward by >80px,
-      // throttled to avoid excessive calls (every 8s max)
-      if (dy > 80 && !refreshing && !balanceLoading && now - lastAutoRefreshTsRef.current > 8000) {
-        lastAutoRefreshTsRef.current = now;
-        onRefresh();
-      }
-    } catch {}
-  };
+  // Scroll handling removed - no automatic refresh on scroll
 
   const refreshMarketData = async () => {
     try {
@@ -716,8 +547,26 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
     navigation.navigate('SelectReceiveToken');
   };
 
-  const handleTopUp = () => {
-    navigation.navigate('TopUp');
+  const handleTokenAction = (token: NetworkToken, action: 'send' | 'topup' | 'receive') => {
+    setActionMenuVisible(false);
+    setSelectedTokenForAction(null);
+
+    switch (action) {
+      case 'send':
+        navigation.navigate('SendDialog', { token });
+        break;
+      case 'topup':
+        navigation.navigate('TopUp', { token });
+        break;
+      case 'receive':
+        navigation.navigate('ReceiveDialog', { token });
+        break;
+    }
+  };
+
+  const showTokenActionMenu = (token: NetworkToken) => {
+    setSelectedTokenForAction(token);
+    setActionMenuVisible(true);
   };
 
 
@@ -850,15 +699,21 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       shadowRadius: 8,
       elevation: 4,
     },
-    balanceRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-    balanceContent: { flex: 1, marginRight: 12 },
-    balanceActions: { flexDirection: 'row', alignItems: 'center' },
+    balanceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     bigBalance: { fontSize: 32, fontWeight: '800', color: theme.colors.text },
-    errorText: { fontSize: 12, color: theme.colors.error, marginTop: 4 },
-    loadingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-    loadingText: { fontSize: 12, color: theme.colors.textSecondary, marginLeft: 6 },
-    refreshButton: { padding: 8, marginRight: 8 },
+    balanceLoadingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    balanceLoadingText: {
+      marginLeft: 8,
+      fontSize: 16,
+      color: theme.colors.textSecondary,
+      fontWeight: '500',
+    },
     eyeButton: { padding: 6, borderRadius: 16 },
+    refreshButton: { padding: 6, borderRadius: 16, marginLeft: 8 },
     actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 },
     pillButton: { flex: 1, paddingVertical: 14, borderRadius: 14, alignItems: 'center', marginHorizontal: 4 },
     pillPrimary: { backgroundColor: theme.colors.primary },
@@ -885,6 +740,17 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
     tokenPriceText: { color: theme.colors.textSecondary, marginRight: 10 },
     tokenRightCol: { marginLeft: 'auto', alignItems: 'flex-end' },
     tokenRightFiat: { alignItems: 'flex-end' },
+    tokenBalanceLoading: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+    },
+    tokenPriceLoading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+    },
     pctGreen: { color: theme.colors.success },
     pctRed: { color: theme.colors.error },
     divider: { height: 1, backgroundColor: theme.colors.border, marginHorizontal: 16 },
@@ -963,25 +829,37 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
       alignItems: 'center',
       justifyContent: 'center',
     },
-    loadingContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
+    actionMenuContainer: {
       backgroundColor: theme.colors.surface,
-      borderRadius: 16,
-      padding: 24,
-      margin: 20,
-      shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: theme.isDark ? 0.25 : 0.1,
-      shadowRadius: 8,
-      elevation: 4,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: '40%',
+      marginTop: 'auto',
     },
-    loadingMessage: {
-      marginTop: 16,
+    actionMenuHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    actionMenuTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text },
+    actionMenuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    actionMenuItemText: {
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: '600',
       color: theme.colors.text,
-      textAlign: 'center',
+      marginLeft: 16,
     },
   });
 
@@ -1061,8 +939,6 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       <ScrollView
         style={styles.scrollContainer}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -1070,48 +946,26 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       <View style={styles.balanceCard}>
         <View style={styles.balanceRow}>
-          <View style={styles.balanceContent}>
+          {(balanceLoading || tokenBalanceLoading || tokenPriceLoading) ? (
+            <View style={styles.balanceLoadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={styles.balanceLoadingText}>Loading...</Text>
+            </View>
+          ) : (
             <Text style={styles.bigBalance}>
-              {isBalanceHidden ? '•••••' : initialLoading ? 'Loading...' : `${formatAmount(totalPortfolioValue)} ${selectedCurrency}`}
+              {isBalanceHidden ? '•••••' : formatPrice(totalUSDValue)}
             </Text>
-            {/* Error and loading indicators */}
-            {balanceError && (
-              <Text style={styles.errorText}>{balanceError}</Text>
-            )}
-            {ratesError && (
-              <Text style={styles.errorText}>FX rates: {ratesError}</Text>
-            )}
-            {(initialLoading || balanceLoading || ratesLoading) && (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-                <Text style={styles.loadingText}>
-                  {initialLoading ? 'Loading wallet data...' : balanceLoading ? 'Loading balance...' : 'Updating rates...'}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.balanceActions}>
-            <TouchableOpacity 
-              style={styles.refreshButton} 
-              onPress={onRefresh}
-              disabled={initialLoading || refreshing || balanceLoading || ratesLoading}
-            >
-              <Icon 
-                name="refresh" 
-                size={20} 
-                color={initialLoading || refreshing || balanceLoading || ratesLoading ? theme.colors.textSecondary : theme.colors.primary} 
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.eyeButton} onPress={async () => {
-              const newValue = !isBalanceHidden;
-              setIsBalanceHidden(newValue);
-              try {
+          )}
+          <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.eyeButton} onPress={async () => {
+                const newValue = !isBalanceHidden;
+                setIsBalanceHidden(newValue);
                 await AsyncStorage.setItem('pref_hide_balances', newValue ? 'true' : 'false');
-              } catch (error) {
-                console.error('Failed to save hide balance preference:', error);
-              }
-            }}>
-              <Icon name={isBalanceHidden ? 'visibility-off' : 'visibility'} size={22} color={theme.colors.text} />
+              }}>
+                <Icon name={isBalanceHidden ? 'visibility-off' : 'visibility'} size={22} color={theme.colors.text} />
+              </TouchableOpacity>
+            <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
+              <Icon name="refresh" size={20} color={theme.colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1123,7 +977,7 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
           <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]} onPress={handleReceiveMoney}>
             <Text style={styles.pillTextLight}>Receive</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.pillButton, styles.pillDark]} onPress={handleTopUp}>
+          <TouchableOpacity style={[styles.pillButton, styles.pillPrimary]} onPress={() => navigation.navigate('SelectToken', { action: 'topup' })}>
             <Text style={styles.pillTextLight}>Top Up</Text>
           </TouchableOpacity>
         </View>
@@ -1160,7 +1014,11 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
             .filter(t => !hideSmallAssets || (balances[t.id] || 0) > 0)
             .map((t, idx) => (
               <View key={`${String(t.id).toLowerCase()}-${idx}`}>
-                <View style={styles.tokenRow}>
+                <TouchableOpacity
+                  style={styles.tokenRow}
+                  onPress={() => showTokenActionMenu(t)}
+                  activeOpacity={0.7}
+                >
                   {t.iconUrl ? (
                     <Image source={{ uri: t.iconUrl }} style={[styles.tokenIcon, { borderRadius: 14 }]} />
                   ) : (
@@ -1173,37 +1031,44 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
                       <Text style={styles.tokenSymbol}>{t.symbol}</Text>
                     </View>
                     <View style={styles.tokenPriceRow}>
-                      <Text style={styles.tokenPriceText}>{`${t.priceUSDT} USDT`}</Text>
-                      <Text style={(t.changePct24h || 0) >= 0 ? styles.pctGreen : styles.pctRed}>
-                        {`${(t.changePct24h || 0) >= 0 ? '+' : ''}${t.changePct24h || 0}%`}
-                      </Text>
+                      {tokenPriceLoading ? (
+                        <View style={styles.tokenPriceLoading}>
+                          <ActivityIndicator size="small" color={theme.colors.primary} />
+                        </View>
+                      ) : (
+                        <>
+                          <Text style={styles.tokenPriceText}>{formatPrice(t.priceUSDT || 0)}</Text>
+                          <Text style={(t.changePct24h || 0) >= 0 ? styles.pctGreen : styles.pctRed}>
+                            {`${(t.changePct24h || 0) >= 0 ? '+' : ''}${t.changePct24h || 0}%`}
+                          </Text>
+                        </>
+                      )}
                     </View>
                   </View>
                   <View style={styles.tokenRightCol}>
-                    <Text style={{ color: theme.colors.text }}>
-                      {initialLoading ? 'Loading...' : t.symbol === 'BTC' 
-                        ? `${(balances[t.id] || 0).toFixed(8)} BTC` 
-                        : t.symbol === 'ETH'
-                        ? `${(balances[t.id] || 0).toFixed(6)} ETH`
-                        : t.symbol === 'SOL'
-                        ? `${(balances[t.id] || 0).toFixed(6)} SOL`
-                        : `${balances[t.id] || 0}`
-                      }
-                    </Text>
-                    <Text style={[{ color: theme.colors.textSecondary }]}>
-                      {initialLoading ? 'Loading...' : (() => {
-                        const tokenBalance = balances[t.id] || 0;
-                        const tokenValueInUSD = tokenBalance * (t.priceUSDT || 0);
-                        
-                        const convertedValue = selectedCurrency === 'USD' 
-                          ? tokenValueInUSD 
-                          : convertAmount(tokenValueInUSD, 'USD', selectedCurrency);
-                        
-                        return `${formatAmount(convertedValue)} ${selectedCurrency}`;
-                      })()}
-                    </Text>
+                    {tokenBalanceLoading ? (
+                      <View style={styles.tokenBalanceLoading}>
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={{ color: theme.colors.text }}>
+                          {t.symbol === 'BTC' 
+                            ? `${(balances[t.id] || 0).toFixed(8)} BTC` 
+                            : t.symbol === 'ETH'
+                            ? `${(balances[t.id] || 0).toFixed(6)} ETH`
+                            : t.symbol === 'SOL'
+                            ? `${(balances[t.id] || 0).toFixed(6)} SOL`
+                            : `${balances[t.id] || 0}`
+                          }
+                        </Text>
+                        <Text style={[{ color: theme.colors.textSecondary }]}>
+                          {formatPrice((balances[t.id] || 0) * (t.priceUSDT || 0))}
+                        </Text>
+                      </>
+                    )}
                   </View>
-                </View>
+                </TouchableOpacity>
                 {idx < selectedTokens.length - 1 && <View style={styles.divider} />}
               </View>
             ))}
@@ -1219,14 +1084,9 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
 
       </ScrollView>
 
-      {(initialLoading || balanceLoading) && (
+      {balanceLoading && (
         <View style={styles.globalLoadingOverlay} pointerEvents="auto">
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            {/* <Text style={styles.loadingMessage}>
-              {initialLoading ? 'Loading wallet data...' : 'Loading balance...'}
-            </Text> */}
-          </View>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
       )}
 
@@ -1264,6 +1124,46 @@ export const WalletDashboardScreen: React.FC<WalletDashboardScreenProps> = ({ na
                 updateCellsBatchingPeriod={50}
               />
             )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Token Action Menu Modal */}
+      <Modal visible={actionMenuVisible} transparent animationType="fade" onRequestClose={() => setActionMenuVisible(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setActionMenuVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={styles.actionMenuContainer}>
+            <View style={styles.actionMenuHeader}>
+              <Text style={styles.actionMenuTitle}>
+                {selectedTokenForAction?.symbol} Actions
+              </Text>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setActionMenuVisible(false)}>
+                <Icon name="close" size={22} color={theme.colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'send')}
+            >
+              <Icon name="send" size={24} color={theme.colors.primary} />
+              <Text style={styles.actionMenuItemText}>Send</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'topup')}
+            >
+              <Icon name="add-circle" size={24} color={theme.colors.success} />
+              <Text style={styles.actionMenuItemText}>Top Up</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionMenuItem}
+              onPress={() => selectedTokenForAction && handleTokenAction(selectedTokenForAction, 'receive')}
+            >
+              <Icon name="call-received" size={24} color={theme.colors.accent} />
+              <Text style={styles.actionMenuItemText}>Receive</Text>
+            </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

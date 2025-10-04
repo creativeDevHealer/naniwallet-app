@@ -6,15 +6,21 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import TokenService, { NetworkToken } from '../../services/tokenService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface Props { navigation: any }
+interface Props { 
+  navigation: any;
+  route?: any;
+}
 
-export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
+export const SelectTokenScreen: React.FC<Props> = ({ navigation, route }) => {
   const { theme } = useTheme();
   const [query, setQuery] = useState('');
   const [tokens, setTokens] = useState<NetworkToken[]>([]);
   const [enabled, setEnabled] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  
+  // Check if this is a top-up flow
+  const isTopUpFlow = route?.params?.action === 'topup';
 
   useEffect(() => {
     const load = async () => {
@@ -124,6 +130,9 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
         }
         setEnabled(map);
       } catch {}
+      finally {
+        setLoading(false);
+      }
     });
     return unsubscribe;
   }, [navigation]);
@@ -135,6 +144,16 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
     back: { padding: 8 },
     searchWrap: { margin: 16, backgroundColor: theme.colors.surface, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center' },
     input: { flex: 1, paddingVertical: 10, color: theme.colors.text },
+    // New styles for receive/send token pattern
+    tokenItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1 },
+    tokenLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    tokenIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderRadius: 16 },
+    tokenInfo: { flex: 1 },
+    tokenSymbol: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
+    tokenPriceRow: { flexDirection: 'row', alignItems: 'center' },
+    tokenPrice: { fontSize: 14, marginRight: 8 },
+    tokenChange: { fontSize: 14, fontWeight: '500' },
+    // Legacy styles for backward compatibility
     row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14 },
     icon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
     midCol: { flex: 1 },
@@ -157,7 +176,7 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity style={styles.back} onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Select Token</Text>
+        <Text style={styles.title}>{isTopUpFlow ? 'Select Token to Top Up' : 'Select Token'}</Text>
         <View style={{ width: 32 }} />
       </View>
       <View style={styles.searchWrap}>
@@ -189,27 +208,11 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
         data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            {item.iconUrl ? (
-              <Image source={{ uri: item.iconUrl }} style={[styles.icon, { borderRadius: 14 }]} />
-            ) : (
-              <View style={[styles.icon, { backgroundColor: item.color + '33' }]}>
-                <Text style={{ color: item.color, fontWeight: '800' }}>{item.symbol.charAt(0)}</Text>
-              </View>
-            )}
-            <View style={styles.midCol}>
-              <View style={styles.nameRow}>
-                <Text style={styles.symbol}>{item.symbol}</Text>
-                <Text style={styles.tag}>{item.name}</Text>
-              </View>
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>{item.priceUSDT ? item.priceUSDT : '--'} USDT</Text>
-                <Text style={[styles.pct, { color: (item.changePct24h || 0) >= 0 ? theme.colors.success : theme.colors.error }]}>
-                  {item.changePct24h ? `${item.changePct24h > 0 ? '+' : ''}${item.changePct24h}%` : '--'}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.toggle} onPress={async () => {
+          <TouchableOpacity
+            style={[styles.tokenItem, { borderBottomColor: theme.colors.border }]}
+            onPress={isTopUpFlow ? () => {
+              navigation.navigate('TopUp', { token: item });
+            } : async () => {
               const toCanonical = (sym: string) => {
                 const s = String(sym).toUpperCase();
                 if (s === 'BTC') return 'btc';
@@ -256,23 +259,42 @@ export const SelectTokenScreen: React.FC<Props> = ({ navigation }) => {
               const map: Record<string, boolean> = {};
               selectedIds.forEach((id) => { map[id] = true; map[toCanonical(id)] = true; });
               setEnabled(map);
-            }}>
-              {(() => {
-                const toCanonical = (sym: string) => {
-                  const s = String(sym).toUpperCase();
-                  if (s === 'BTC') return 'btc';
-                  if (s === 'ETH') return 'eth';
-                  if (s === 'SOL') return 'sol';
-                  return s.toLowerCase();
-                };
-                const canonicalId = toCanonical(item.symbol);
-                const on = !!(enabled[item.id] || enabled[canonicalId] || enabled[item.symbol.toUpperCase()]);
-                return (
-                  <Icon name={on ? 'toggle-on' : 'toggle-off'} size={40} color={on ? theme.colors.accent : theme.colors.border} />
-                );
-              })()}
-            </TouchableOpacity>
-          </View>
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.tokenLeft}>
+              {item.iconUrl ? (
+                <Image source={{ uri: item.iconUrl }} style={[styles.tokenIcon, { borderRadius: 16 }]} />
+              ) : (
+                <View style={[styles.tokenIcon, { backgroundColor: item.color + '20' }]}>
+                  <Text style={{ color: item.color, fontWeight: '900', fontSize: 16 }}>{item.symbol.charAt(0)}</Text>
+                </View>
+              )}
+              <View style={styles.tokenInfo}>
+                <Text style={[styles.tokenSymbol, { color: theme.colors.text }]}>{item.symbol}</Text>
+                <View style={styles.tokenPriceRow}>
+                  <Text style={[styles.tokenPrice, { color: theme.colors.textSecondary }]}>{`${item.priceUSDT || '--'} USDT`}</Text>
+                  <Text style={[styles.tokenChange, { color: (item.changePct24h || 0) >= 0 ? theme.colors.success : theme.colors.error }]}>
+                    {`${(item.changePct24h || 0) >= 0 ? '+' : ''}${item.changePct24h || '--'}%`}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            {!isTopUpFlow && (() => {
+              const toCanonical = (sym: string) => {
+                const s = String(sym).toUpperCase();
+                if (s === 'BTC') return 'btc';
+                if (s === 'ETH') return 'eth';
+                if (s === 'SOL') return 'sol';
+                return s.toLowerCase();
+              };
+              const canonicalId = toCanonical(item.symbol);
+              const on = !!(enabled[item.id] || enabled[canonicalId] || enabled[item.symbol.toUpperCase()]);
+              return (
+                <Icon name={on ? 'check-circle' : 'radio-button-unchecked'} size={32} color={on ? theme.colors.primary : theme.colors.textSecondary} />
+              );
+            })()}
+          </TouchableOpacity>
         )}
       />)}
     </SafeAreaView>

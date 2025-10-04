@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, BackHandler, Modal, Animated, Dimensions, ScrollView } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLocale } from '../../context/LocaleContext';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -13,7 +13,7 @@ interface Props { navigation: any }
 export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
   const { theme, setThemeMode, changePrimaryColor } = useTheme();
   const { locale } = useLocale();
-  const { selectedCurrency, setSelectedCurrency, getCurrencyName } = useCurrency();
+  const { currency, setCurrency, currencyInfo } = useCurrency();
   const languageLabel = useMemo(() => {
     switch (locale) {
       case 'en':
@@ -34,6 +34,11 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
   const [currencySheetOpen, setCurrencySheetOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState<'Auto' | 'Light' | 'Dark'>('Auto');
   const [currentPrimaryColor, setCurrentPrimaryColor] = useState<string>('#2E7D32');
+  
+  // Animation values
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [scaleAnim] = useState(new Animated.Value(0.8));
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
   useEffect(() => {
     (async () => {
@@ -56,13 +61,62 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
     await AsyncStorage.setItem('pref_hide_balances', value ? 'true' : 'false');
   };
 
+  // Animation functions
+  const showModal = (modalType: 'theme' | 'color' | 'currency') => {
+    fadeAnim.setValue(0);
+    scaleAnim.setValue(0.8);
+    
+    switch (modalType) {
+      case 'theme':
+        setThemeSheetOpen(true);
+        break;
+      case 'color':
+        setColorSheetOpen(true);
+        break;
+      case 'currency':
+        setCurrencySheetOpen(true);
+        break;
+    }
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const hideModal = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.8,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setThemeSheetOpen(false);
+      setColorSheetOpen(false);
+      setCurrencySheetOpen(false);
+    });
+  };
+
   // Close sheets on hardware back instead of propagating to Home's handler
   useEffect(() => {
     if (!themeSheetOpen && !colorSheetOpen && !currencySheetOpen) return;
     const onBack = () => {
-      if (themeSheetOpen) setThemeSheetOpen(false);
-      if (colorSheetOpen) setColorSheetOpen(false);
-      if (currencySheetOpen) setCurrencySheetOpen(false);
+      hideModal();
       return true; // consume back press
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
@@ -75,6 +129,167 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
     back: { padding: 8 },
     content: { padding: 20 },
     text: { color: theme.colors.text },
+    
+    // Modern Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+    },
+    modalBackdrop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    modalContainer: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 20,
+      width: '100%',
+      maxWidth: 400,
+      maxHeight: '80%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    colorModalContainer: {
+      maxHeight: screenHeight * 0.8,
+      minHeight: 400,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingVertical: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: theme.colors.text,
+    },
+    closeButton: {
+      padding: 8,
+      borderRadius: 20,
+      backgroundColor: theme.colors.background,
+    },
+    optionsContainer: {
+      paddingVertical: 16,
+    },
+    optionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 24,
+      paddingVertical: 16,
+      marginHorizontal: 8,
+      marginVertical: 4,
+      borderRadius: 16,
+      backgroundColor: theme.colors.background,
+    },
+    optionItemSelected: {
+      backgroundColor: theme.colors.accentLight,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    optionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    optionIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.colors.surfaceSecondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+    },
+    optionTextContainer: {
+      flex: 1,
+    },
+    optionTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: theme.colors.text,
+      marginBottom: 2,
+    },
+    optionDescription: {
+      fontSize: 14,
+      color: theme.colors.textSecondary,
+    },
+    currencyCode: {
+      fontSize: 12,
+      color: theme.colors.textTertiary,
+      marginTop: 2,
+    },
+    currencyFlag: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.colors.surfaceSecondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+    },
+    flagEmoji: {
+      fontSize: 24,
+    },
+    
+    // Color Modal Styles
+    colorScrollContainer: {
+      flex: 1,
+      maxHeight: 350,
+      minHeight: 300,
+    },
+    colorGridContainer: {
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+      paddingBottom: 20,
+    },
+    colorOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginVertical: 4,
+      marginHorizontal: 8,
+      borderRadius: 12,
+      backgroundColor: theme.colors.background,
+    },
+    colorOptionSelected: {
+      backgroundColor: theme.colors.accentLight,
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    colorCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+    },
+    colorCircleSelected: {
+      borderColor: theme.colors.white,
+      borderWidth: 3,
+    },
+    colorLabel: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: theme.colors.text,
+      flex: 1,
+    },
   });
 
   return (
@@ -88,13 +303,13 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
       </View>
       <View style={styles.content}>
         <View style={{ backgroundColor: theme.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}>
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => setCurrencySheetOpen(true)}>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => showModal('currency')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Icon name="attach-money" size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
               <Text style={{ color: theme.colors.text }}>{t('currency', locale)}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: theme.colors.textSecondary, marginRight: 6 }}>{selectedCurrency}</Text>
+              <Text style={{ color: theme.colors.textSecondary, marginRight: 6 }}>{currencyInfo.symbol} {currencyInfo.code}</Text>
               <Icon name="chevron-right" size={22} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
@@ -110,7 +325,7 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => setThemeSheetOpen(true)}>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => showModal('theme')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Icon name="brightness-6" size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
               <Text style={{ color: theme.colors.text }}>{t('theme', locale)}</Text>
@@ -121,7 +336,7 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => setColorSheetOpen(true)}>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }} onPress={() => showModal('color')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Icon name="palette" size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
               <Text style={{ color: theme.colors.text }}>{t('primary_color', locale)}</Text>
@@ -158,160 +373,265 @@ export const PreferencesScreen: React.FC<Props> = ({ navigation }) => {
         </View>
       </View>
 
-      {themeSheetOpen && (
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setThemeSheetOpen(false)}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)' }}
+      {/* Modern Theme Modal */}
+      <Modal
+        visible={themeSheetOpen}
+        transparent={true}
+        animationType="none"
+        onRequestClose={hideModal}
+      >
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
         >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {}}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderColor: theme.colors.border }}
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={hideModal}
+          />
+          <Animated.View 
+            style={[
+              styles.modalContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
           >
-            <View style={{ alignItems: 'center', paddingTop: 10 }}>
-              <View style={{ width: 44, height: 4, backgroundColor: theme.colors.border, borderRadius: 3 }} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Theme</Text>
+              <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
+                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-            <Text style={{ textAlign: 'center', paddingVertical: 14, color: theme.colors.text, fontWeight: '700' }}>Theme</Text>
-            {([
-              { label: 'Light', icon: 'wb-sunny', value: 'light' },
-              { label: 'Dark', icon: 'nightlight', value: 'dark' },
-              { label: 'Auto', icon: 'brightness-6', value: 'auto' },
-            ] as const).map((opt, idx) => (
-              <View key={opt.value} style={{ borderTopWidth: idx === 0 ? 1 : 0, borderBottomWidth: 1, borderColor: theme.colors.border }}>
+            
+            <View style={styles.optionsContainer}>
+              {([
+                { label: 'Light', icon: 'wb-sunny', value: 'light', description: 'Always light theme' },
+                { label: 'Dark', icon: 'nightlight', value: 'dark', description: 'Always dark theme' },
+                { label: 'Auto', icon: 'brightness-6', value: 'auto', description: 'Follow system setting' },
+              ] as const).map((opt) => (
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 }}
+                  key={opt.value}
+                  style={[
+                    styles.optionItem,
+                    currentTheme.toLowerCase() === opt.value && styles.optionItemSelected
+                  ]}
                   onPress={async () => {
                     setThemeMode(opt.value as any);
                     await AsyncStorage.setItem('themeMode', opt.value);
                     setCurrentTheme(opt.label as any);
-                    setThemeSheetOpen(false);
+                    hideModal();
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Icon name={opt.icon} size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
-                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '500' }}>{opt.label}</Text>
+                  <View style={styles.optionContent}>
+                    <View style={[
+                      styles.optionIcon,
+                      currentTheme.toLowerCase() === opt.value && { backgroundColor: theme.colors.primary }
+                    ]}>
+                      <Icon 
+                        name={opt.icon} 
+                        size={20} 
+                        color={currentTheme.toLowerCase() === opt.value ? theme.colors.white : theme.colors.text} 
+                      />
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[
+                        styles.optionTitle,
+                        currentTheme.toLowerCase() === opt.value && { color: theme.colors.primary }
+                      ]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={styles.optionDescription}>{opt.description}</Text>
+                    </View>
                   </View>
                   {currentTheme.toLowerCase() === opt.value && (
-                    <Icon name="check" size={20} color={theme.colors.primary} />
+                    <Icon name="check-circle" size={24} color={theme.colors.primary} />
                   )}
                 </TouchableOpacity>
-              </View>
-            ))}
-            <View style={{ height: 18 }} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+              ))}
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
 
-      {colorSheetOpen && (
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setColorSheetOpen(false)}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)' }}
+      {/* Modern Color Modal */}
+      <Modal
+        visible={colorSheetOpen}
+        transparent={true}
+        animationType="none"
+        onRequestClose={hideModal}
+      >
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
         >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {}}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderColor: theme.colors.border, maxHeight: '80%' }}
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={hideModal}
+          />
+          <Animated.View 
+            style={[
+              styles.modalContainer,
+              styles.colorModalContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
           >
-            <View style={{ alignItems: 'center', paddingTop: 10 }}>
-              <View style={{ width: 44, height: 4, backgroundColor: theme.colors.border, borderRadius: 3 }} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Primary Color</Text>
+              <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
+                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
             </View>
-            <Text style={{ textAlign: 'center', paddingVertical: 14, color: theme.colors.text, fontWeight: '700' }}>{t('primary_color', locale)}</Text>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 22 }}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }}>
-                {[
-                  { name: 'Islamic Green', color: '#2E7D32' },
-                  { name: 'Ocean Blue', color: '#1976D2' },
-                  { name: 'Royal Purple', color: '#7B1FA2' },
-                  { name: 'Sunset Orange', color: '#F57C00' },
-                  { name: 'Cherry Red', color: '#D32F2F' },
-                  { name: 'Teal Blue', color: '#00796B' },
-                  { name: 'Deep Indigo', color: '#303F9F' },
-                  { name: 'Warm Brown', color: '#5D4037' },
-                  { name: 'Forest Green', color: '#388E3C' },
-                  { name: 'Crimson', color: '#C2185B' },
-                  { name: 'Navy Blue', color: '#1565C0' },
-                  { name: 'Dark Gray', color: '#424242' },
-                ].map((colorOption, index) => (
-                  <TouchableOpacity
-                    key={colorOption.color}
-                    style={{
-                      width: '23%',
-                      height: 60,
-                      marginBottom: 8,
-                      borderRadius: 14,
-                      backgroundColor: colorOption.color,
-                      borderWidth: currentPrimaryColor === colorOption.color ? 3 : 1,
-                      borderColor: currentPrimaryColor === colorOption.color ? theme.colors.text : theme.colors.border,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      shadowColor: theme.colors.shadow,
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.12,
-                      shadowRadius: 5,
-                      elevation: 3,
-                    }}
-                    onPress={async () => {
-                      changePrimaryColor(colorOption.color);
-                      setCurrentPrimaryColor(colorOption.color);
-                      setColorSheetOpen(false);
-                    }}
-                  >
-                    {currentPrimaryColor === colorOption.color && (
-                      <Icon name="check" size={20} color="white" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={{ height: 20 }} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
-
-      {currencySheetOpen && (
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setCurrencySheetOpen(false)}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: theme.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)' }}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {}}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: theme.colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, borderWidth: 1, borderColor: theme.colors.border }}
-          >
-            <View style={{ alignItems: 'center', paddingTop: 10 }}>
-              <View style={{ width: 44, height: 4, backgroundColor: theme.colors.border, borderRadius: 3 }} />
-            </View>
-            <Text style={{ textAlign: 'center', paddingVertical: 14, color: theme.colors.text, fontWeight: '700' }}>{t('currency', locale)}</Text>
-            {([
-              { label: 'USD', icon: 'attach-money', value: 'USD' },
-              { label: 'GBP', icon: 'currency-pound', value: 'GBP' },
-              { label: 'SOS', icon: 'currency-exchange', value: 'SOS' },
-            ] as const).map((opt, idx) => (
-              <View key={opt.value} style={{ borderTopWidth: idx === 0 ? 1 : 0, borderBottomWidth: 1, borderColor: theme.colors.border }}>
+            
+            <ScrollView 
+              style={styles.colorScrollContainer}
+              contentContainerStyle={styles.colorGridContainer}
+              showsVerticalScrollIndicator={true}
+              bounces={false}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+            >
+              {[
+                { name: 'Islamic Green', color: '#2E7D32' },
+                { name: 'Ocean Blue', color: '#1976D2' },
+                { name: 'Royal Purple', color: '#7B1FA2' },
+                { name: 'Sunset Orange', color: '#F57C00' },
+                { name: 'Cherry Red', color: '#D32F2F' },
+                { name: 'Teal Blue', color: '#00796B' },
+                { name: 'Deep Indigo', color: '#303F9F' },
+                { name: 'Warm Brown', color: '#5D4037' },
+                { name: 'Forest Green', color: '#388E3C' },
+                { name: 'Crimson', color: '#C2185B' },
+                { name: 'Navy Blue', color: '#1565C0' },
+                { name: 'Dark Gray', color: '#424242' },
+                { name: 'Gold', color: '#FFD700' },
+                { name: 'Silver', color: '#C0C0C0' },
+                { name: 'Emerald', color: '#50C878' },
+                { name: 'Ruby', color: '#E0115F' },
+                { name: 'Sapphire', color: '#0F52BA' },
+                { name: 'Amber', color: '#FFBF00' },
+                { name: 'Rose Gold', color: '#E8B4B8' },
+                { name: 'Platinum', color: '#E5E4E2' },
+              ].map((colorOption) => (
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 }}
+                  key={colorOption.color}
+                  style={[
+                    styles.colorOption,
+                    currentPrimaryColor === colorOption.color && styles.colorOptionSelected
+                  ]}
                   onPress={async () => {
-                    await setSelectedCurrency(opt.value as any);
-                    setCurrencySheetOpen(false);
+                    changePrimaryColor(colorOption.color);
+                    setCurrentPrimaryColor(colorOption.color);
+                    hideModal();
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Icon name={opt.icon} size={22} color={theme.colors.text} style={{ marginRight: 12 }} />
-                    <Text style={{ color: theme.colors.text, fontSize: 16, fontWeight: '500' }}>{opt.label} - {getCurrencyName(opt.value as any)}</Text>
+                  <View style={[
+                    styles.colorCircle,
+                    { backgroundColor: colorOption.color },
+                    currentPrimaryColor === colorOption.color && styles.colorCircleSelected
+                  ]}>
+                    {currentPrimaryColor === colorOption.color && (
+                      <Icon name="check" size={16} color="white" />
+                    )}
                   </View>
-                  {selectedCurrency === opt.value && (
-                    <Icon name="check" size={20} color={theme.colors.primary} />
+                  <Text style={[
+                    styles.colorLabel,
+                    currentPrimaryColor === colorOption.color && { color: theme.colors.primary }
+                  ]}>
+                    {colorOption.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
+
+      {/* Modern Currency Modal */}
+      <Modal
+        visible={currencySheetOpen}
+        transparent={true}
+        animationType="none"
+        onRequestClose={hideModal}
+      >
+        <Animated.View 
+          style={[
+            styles.modalOverlay,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={hideModal}
+          />
+          <Animated.View 
+            style={[
+              styles.modalContainer,
+              {
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Choose Currency</Text>
+              <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
+                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.optionsContainer}>
+              {[
+                { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', description: 'United States Dollar' },
+                { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧', description: 'British Pound Sterling' },
+                { code: 'SOS', symbol: 'S', name: 'Somali Shilling', flag: '🇸🇴', description: 'Somali Shilling' },
+              ].map((currencyOption) => (
+                <TouchableOpacity
+                  key={currencyOption.code}
+                  style={[
+                    styles.optionItem,
+                    currency === currencyOption.code && styles.optionItemSelected
+                  ]}
+                  onPress={() => {
+                    setCurrency(currencyOption.code as any);
+                    hideModal();
+                  }}
+                >
+                  <View style={styles.optionContent}>
+                    <View style={styles.currencyFlag}>
+                      <Text style={styles.flagEmoji}>{currencyOption.flag}</Text>
+                    </View>
+                    <View style={styles.optionTextContainer}>
+                      <Text style={[
+                        styles.optionTitle,
+                        currency === currencyOption.code && { color: theme.colors.primary }
+                      ]}>
+                        {currencyOption.name}
+                      </Text>
+                      <Text style={styles.optionDescription}>
+                        {currencyOption.description}
+                      </Text>
+                      <Text style={styles.currencyCode}>
+                        {currencyOption.symbol} {currencyOption.code}
+                      </Text>
+                    </View>
+                  </View>
+                  {currency === currencyOption.code && (
+                    <Icon name="check-circle" size={24} color={theme.colors.primary} />
                   )}
                 </TouchableOpacity>
-              </View>
-            ))}
-            <View style={{ height: 18 }} />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+              ))}
+            </View>
+          </Animated.View>
+        </Animated.View>
+      </Modal>
     </SafeAreaView>
   );
 };

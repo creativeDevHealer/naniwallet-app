@@ -218,7 +218,7 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
   };
 
 
-  // Get wallet balance
+  // Get wallet balance (placeholder - actual balance loading is handled by specific balance services)
   const getWalletBalance = async (): Promise<string> => {
     try {
       if (!wallet) {
@@ -226,8 +226,8 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
         return '0.0';
       }
 
-      const balance = await walletService.getBalance(wallet.address);
-      return balance;
+      // Return a placeholder balance - actual balance loading is handled by ETHBalanceService, BTCBalanceService, etc.
+      return '0.0';
     } catch (error) {
       console.warn('❌ Failed to get wallet balance:', error);
       return '0.0';
@@ -281,11 +281,18 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
   };
 
   const setActiveWallet = async (walletId: string) => {
+    console.log(`🔄 setActiveWallet called with ID: ${walletId}`);
+    console.log(`🔄 Available wallets:`, wallets.map(w => ({ id: w.id, address: w.address, name: w.name })));
+    
     const target = wallets.find(w => (w.id || w.address) === walletId);
     if (target) {
+      console.log(`✅ Found target wallet:`, { id: target.id, address: target.address, name: target.name });
       setWallet(target);
       setActiveWalletState(target);
       await AsyncStorage.setItem('activeWalletId', walletId);
+      console.log(`✅ Active wallet updated to: ${target.name} (${target.address})`);
+    } else {
+      console.log(`❌ No wallet found with ID: ${walletId}`);
     }
   };
 
@@ -320,6 +327,7 @@ export const Web3AuthProvider: React.FC<Web3AuthProviderProps> = ({ children }) 
     user,
     wallet,
     wallets,
+    activeWallet,
     loading,
     initialize,
     login,
